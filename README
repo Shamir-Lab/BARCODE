@@ -1,0 +1,5 @@
+#COMPLIATION
+gcc -o barcode barcode.c -I/specific/a/nas-eran-01/groups/eran_halperin/yaronein/projects/BARCODE/scripts/include/hat-trie -L./lib -lhat-trie
+#RUNNING
+/usr/bin/time -v ./barcode $DATA_PATH $PREFIX
+
