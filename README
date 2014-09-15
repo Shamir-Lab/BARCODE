@@ -1,5 +1,7 @@
 #COMPLIATION
-gcc -o barcode barcode.c -I/specific/a/nas-eran-01/groups/eran_halperin/yaronein/projects/BARCODE/scripts/include/hat-trie -L./lib -lhat-trie
+ gcc -o test_barcode test_barcode.c barcode.c bloom-filter.c hash-string.c -I/specific/a/nas-eran-01/groups/eran_halperin/yaronein/projects/BARCODE/scripts/include/hat-trie -L./lib -lhat-trie -lm
 #RUNNING
-/usr/bin/time -v ./barcode $DATA_PATH $PREFIX
-
+/usr/bin/time -v ./test_barcode $TEST_NUMBER $PREFIX $READS_DATA_PATH $REF_GENOME_PATH
+#RUNNING WITH CONDOR
+./make_and_submit_cmd_files.sh $TEST_NUMBER $PREFIX $READS_DATA_PATH $REF_GENOME_PATH
+#example ./make_and_submit_cmd_files.sh 2 hg19_c0_1 results/test1/hg19_c0_1_unique.txt ../data/hg19.fa
