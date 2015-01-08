@@ -18,44 +18,16 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
  */
 
-#include <ctype.h>
+#include "hash-int.h"
 
-#include "hash-string.h"
+/* Hash function for a pointer to an integer */
 
-/* String hash function */
-
-unsigned int string_hash(void *string)
+unsigned int int_hash(void *vlocation)
 {
-	/* This is the djb2 string hash function */
+	int *location;
 
-	unsigned int result = 5381;
-	unsigned char *p;
+	location = (int *) vlocation;
 
-	p = (unsigned char *) string;
-
-	while (*p != '\0') {
-		result = (result << 5) + result + *p;
-		++p;
-	}
-
-	return result;
-}
-
-/* The same function, with a tolower on every character so that
- * case is ignored.  This code is duplicated for performance. */
-
-unsigned int string_nocase_hash(void *string)
-{
-	unsigned int result = 5381;
-	unsigned char *p;
-
-	p = (unsigned char *) string;
-
-	while (*p != '\0') {
-		result = (result << 5) + result + (unsigned int) tolower(*p);
-		++p;
-	}
-
-	return result;
+	return (unsigned int) *location;
 }
 

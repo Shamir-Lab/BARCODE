@@ -1,0 +1,110 @@
+#6/1/15
+
+#compilation and making executable file
+gcc -o test_barcode test_barcode.c barcode.c bloom-filter.c hash-string.c -I/specific/a/nas-eran-01/groups/eran_halperin/yaronein/projects/BARCODE/scripts/include/hat-trie -L./lib -lhat-trie -lm
+
+#data
+data files are in:
+/specific/a/nas-eran-01/groups/eran_halperin/yaronein/projects/BARCODE/data
+reference genome:
+hg19.fa
+shorter version of reference genome files:
+hg19_chr1.fa  hg19.fa  hg19_samp_double.fa  hg19_samp.fa
+read files:
+test.fasta : small sample file with reads cotain N, repeated reads, reverse reads
+fasta_input/hg19.c0.1.fasta : medium file 
+fasta_input/hg19.c0.1.even_only.fasta :only reads no headers (only even lines)
+fasta_input/hg19.c0.1.sorted.fasta : sorted file no headers (good to compare with the results)
+fasta_input/hg19.c10.fasta :big file
+#sanity check for bitbucket
+in bitbucket we have only sample files: hg19_samp.fa* test.fasta
+run:
+make
+and then test1:
+./test_barcode 1 SOME_LABEL data/test.fasta data/hg19_samp.fa
+should result in: SOME_LABLE_repeat.txt SOME_LABEL_1_unique.txt
+##running tests:
+for each test you can run it through command line or through condor
+in order to run it through command line with the arguments specified for each test as below, for example in test 1 which requires test number, prefix_name, fastq_file_path, [reference_genom)]
+the command will be:
+nohup /usr/bin/time -v ./test_barcode 1 test_1 ../data/test.fasta ../data/hg19_samp.fa (../data/hg19.fa)
+it will display time and memory for this test to the screenm and it will also create output files with prefix_name you entered.
+another option is to submit the test with condor submit, for that you make use
+./make_and_submit_cmd_files.sh 1 hg19_c10 ../data/fasta_input/hg19.c10.fasta
+it will create a cmd file for this test and submit it.
+it will like before make the output files, but this time the time and memory results should appear in prefix_test.error file
+
+
+
+
+#########################################################
+###first test of spliting intoto unique and repeat filest:
+##########################################################
+input: test number, prefix_name, fastq_file_path, [reference_genom)]
+output: 
+1.prefix_name_repeat.txt -contains repeated reads and reads which contain N
+2.prefix_name_unique.txt unique valid reads
+
+
+./test_barcode 1 test_1 ../data/test.fasta ../data/hg19_samp.fa
+./make_and_submit_cmd_files.sh 1 hg19_c10 ../data/fasta_input/hg19.c10.fasta
+##################################################################
+###second test of making fp, fn,bf (and other files  to debug)
+##################################################################
+input: test_nubmer, prefix_name, unique_reads_path, genome_reference_path
+output:
+1.prefix_name_fn_unique.txt - false negative reads
+2.prefix_name_fp_unique.txt - false positive reads
+3.prefix_name_unique_bf.txt  - bloom filter values when first line contain size of bf table and second line number of hash functions   
+4.prefix_name_genome_unique_all.txt - all the accepts reads which bf said they are mapped to the genome (including true and fp)
+5.prefix_name_unique_true.txt  - only true reads that are really mapped into the genome (unique_all -fp)
+./test_barcode 2 test_2 test_1_unique.txt ../data/hg19_samp.fa
+
+./make_and_submit_cmd_files.sh 2 test_2 test_1_unique.txt ../data/hg19_samp.fa
+
+./make_and_submit_cmd_files.sh 2 hg19_c0_1 results/test1/hg19_c0_1_unique.txt ../data/hg19.fa
+
+###########################
+###third test of encoding
+#############################
+input: test_nubmer, prefix_name, fastq_file_path, genome_reference_path
+output:
+1.prefix_name_fn_unique.txt - false negative reads
+2.prefix_name_fp_unique.txt - false positive reads
+3.prefix_name_unique_bf.txt  - bloom filter values when first line contain size of bf table and second line number of hash functions
+4.prefix_name_repeat.txt -contains repeated reads and reads which contain N
+
+./test_barcode 3 test_3  ../data/test.fasta  ../data/hg19_samp.fa
+
+nohup /usr/bin/time -v ./test_barcode 3 hg19_c10 ../data/fasta_input/hg19.c10.fasta ../data/hg19.fa > hg19_c10_test_3.output
+
+
+##################################################
+####4th test of partial decoding -for debug
+#################################################
+input: test_nubmer, path to bloom filter
+output: printed bloom fileter
+./test_barcode 4 test_3_unique_bf.txt
+
+###############################
+#### 5th test of  decoding (get encoded files as input, and creates a file with the original reads)
+##################################
+input: test_nubmer,prefix_name_of_econded_files (made in test_3),path_to_directory_of_files,  genome_reference_path, read
+_size
+output:prefix_name_decoded.txt - decoded file which should cotain the original fastq file
+./test_barcode 5 test_3 . ../data/hg19_samp.fa 100
+
+#######################################################
+### 6th test of getting loading file into trie and rewriting it- for debug
+############################################
+input: test_nubmer, path_of_file,  file_name
+output: file_name_reprinted_file.tx
+./test_barcode 6 ../data/fasta_input/hg19.c0.1.fasta hg19.c0.1.fasta
+
+#################################################################
+### 7th test of  taking a fastq file , encoding and decoding it
+#################################################################
+input: test_nubmer,label name,  fastq reads file,  genome reference
+output: encoded files: label_fn_unique.txt, label_fp_uniqe, label_repeat.txt,label_uniqe_bf.txt
+and dedcoded reads ouput: label_decoded_file.txt
+./test_barcode 7 testing_test_7 ../data/test.fasta ../data/hg19_samp.fa

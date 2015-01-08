@@ -18,44 +18,14 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
  */
 
-#include <ctype.h>
+#include <limits.h>
 
-#include "hash-string.h"
+#include "hash-pointer.h"
 
-/* String hash function */
+/* Hash function for a generic pointer */
 
-unsigned int string_hash(void *string)
+unsigned int pointer_hash(void *location)
 {
-	/* This is the djb2 string hash function */
-
-	unsigned int result = 5381;
-	unsigned char *p;
-
-	p = (unsigned char *) string;
-
-	while (*p != '\0') {
-		result = (result << 5) + result + *p;
-		++p;
-	}
-
-	return result;
-}
-
-/* The same function, with a tolower on every character so that
- * case is ignored.  This code is duplicated for performance. */
-
-unsigned int string_nocase_hash(void *string)
-{
-	unsigned int result = 5381;
-	unsigned char *p;
-
-	p = (unsigned char *) string;
-
-	while (*p != '\0') {
-		result = (result << 5) + result + (unsigned int) tolower(*p);
-		++p;
-	}
-
-	return result;
+	return (unsigned int) (unsigned long) location;
 }
 

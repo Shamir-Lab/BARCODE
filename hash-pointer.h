@@ -18,44 +18,32 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
  */
 
-#include <ctype.h>
+/**
+ * @file hash-pointer.h
+ *
+ * Hash function for a generic (void) pointer.  See @ref pointer_hash.
+ */
 
-#include "hash-string.h"
+#ifndef ALGORITHM_HASH_POINTER_H
+#define ALGORITHM_HASH_POINTER_H
 
-/* String hash function */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-unsigned int string_hash(void *string)
-{
-	/* This is the djb2 string hash function */
+/** 
+ * Generate a hash key for a pointer.  The value pointed at by the pointer
+ * is not used, only the pointer itself.
+ *
+ * @param location        The pointer
+ * @return                A hash key for the pointer.
+ */
 
-	unsigned int result = 5381;
-	unsigned char *p;
+unsigned int pointer_hash(void *location);
 
-	p = (unsigned char *) string;
-
-	while (*p != '\0') {
-		result = (result << 5) + result + *p;
-		++p;
-	}
-
-	return result;
+#ifdef __cplusplus
 }
+#endif
 
-/* The same function, with a tolower on every character so that
- * case is ignored.  This code is duplicated for performance. */
-
-unsigned int string_nocase_hash(void *string)
-{
-	unsigned int result = 5381;
-	unsigned char *p;
-
-	p = (unsigned char *) string;
-
-	while (*p != '\0') {
-		result = (result << 5) + result + (unsigned int) tolower(*p);
-		++p;
-	}
-
-	return result;
-}
+#endif /* #ifndef ALGORITHM_HASH_POINTER_H */
 
