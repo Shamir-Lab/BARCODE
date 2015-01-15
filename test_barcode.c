@@ -1,19 +1,19 @@
 #include "barcode.h"
 //************************************************************************************
-//main function
+//load_unique_reads_to_trie function
 //************************************************************************************
 void load_unique_reads_to_trie(hattrie_t* trie_unique, char* reads_file_path, int* results) {
   hattrie_t* trie_repeat;
   int size = 80; //size of read, default value=80 and increases in case of need
   int  pos; //index to buffer
   int c; //reading character
-  int line_number=1;
-  int read_num =0;
+  long long line_number=1;
+  long long read_num =0;
   char *buffer = (char *)malloc(size);
-  int cur_line_num = 1;
+  long long cur_line_num = 1;
   int has_N; //1 if line contains 'N', '0' otherwise 
   FILE* f;
-  int unique_read_num=0;
+  long long unique_read_num=0;
   int is_single_line=0;
 
   f = fopen(reads_file_path, "r");
@@ -71,13 +71,13 @@ void load_fastq_to_trie_and_print(char* file_path, char* label){
   int size = 50; //size of read, default value=80 and increases in case of need
   int  pos; //index to buffer
   int c; //reading character
-  int line_number=1;
-  int read_num =0;
-  int old_repeat_num=0;
+  long long line_number=1;
+  long long read_num =0;
+  long long old_repeat_num=0;
   value_t* m_key;
   int len;
   char *buffer = (char *)malloc(size);
-  int cur_line_num = 1;
+  long long cur_line_num = 1;
   hattrie_t* trie_reads;
   printf("opening file to read \n");
   f = fopen(file_path, "r");
@@ -127,8 +127,8 @@ void load_fastq_to_trie_and_print(char* file_path, char* label){
 void test_make_unique_and_repeat_files(char * read_file_path, char* label) {
     int read_size=0; //the size of the reads
     int table_factor; //arbitrary
-    int num_of_reads;
-    int bf_table_size = table_factor*num_of_reads;
+    long long num_of_reads;
+    long long bf_table_size = table_factor*num_of_reads;
     int num_of_hash_func;
 
     BloomFilter* bf_unique; //BF for the unique tries
@@ -154,7 +154,7 @@ void test_make_unique_and_repeat_files(char * read_file_path, char* label) {
 void test_hash_unique_and_make_fp_fn(char * reads_file_path, char* genome_file_path, char* label) {
     int read_size=0; //the size of the reads
     int table_factor; //arbitrary
-    int bf_table_size;
+    long long bf_table_size;
     int num_of_hash_func;
 //    int results[2];
     FILE* genome_f;
@@ -171,14 +171,14 @@ void test_hash_unique_and_make_fp_fn(char * reads_file_path, char* genome_file_p
     int size = 80; //size of read, default value=80 and increases in case of need
     int  pos; //index to buffer
     int c; //reading character
-    int line_number=1;
-    int read_num =0;
+    long long line_number=1;
+    long long read_num =0;
     char *buffer = (char *)malloc(size);
-    int cur_line_num = 1;
+    long long cur_line_num = 1;
     int has_N; //1 if line contains 'N', '0' otherwise 
     FILE* f;
     hattrie_t* trie_repeat;
-    int unique_read_num=0;
+    long long unique_read_num=0;
     int is_single_line=0;
 
         ////
@@ -228,8 +228,8 @@ void test_hash_unique_and_make_fp_fn(char * reads_file_path, char* genome_file_p
     table_factor = 10; //arbitrary
   //  num_of_reads = line_number/2;
     bf_table_size = table_factor*unique_read_num;
-    num_of_hash_func = (int) ceil(table_factor*0.69314);
-    printf("table size is %d number of hash func is %d \n",bf_table_size,num_of_hash_func); 
+    num_of_hash_func = (long long) ceil(table_factor*0.69314);
+    printf("table size is %lld number of hash func is %d \n",bf_table_size,num_of_hash_func); 
 //hashing uniqe reads trie using bloom filter
     bf_unique = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
     hash_trie_into_bf(trie_unique, bf_unique);
@@ -272,12 +272,12 @@ void test_hash_unique_and_make_fp_fn(char * reads_file_path, char* genome_file_p
 void test_encode(char * read_file_path, char* genome_file_path, char* label) {
     int read_size=0; //the size of the reads
     int table_factor; //arbitrary
-    int num_of_reads;
-    int bf_table_size = table_factor*num_of_reads;
+    long long num_of_reads;
+    long long bf_table_size = table_factor*num_of_reads;
     int num_of_hash_func;
     int results[2];
     int size=0;
-    int read_num=0;
+    long long read_num=0;
     FILE* genome_f;
     BloomFilter* bf_unique; //BF for the unique tries
   //  char* output_label=(char *)malloc(50); //label name for the output files
@@ -306,8 +306,8 @@ void test_encode(char * read_file_path, char* genome_file_path, char* label) {
     genome_f = fopen(genome_file_path, "r");
     table_factor = 10; //arbitrary
     bf_table_size = table_factor*read_num;
-    num_of_hash_func = (int) ceil(table_factor*0.69314);
-    printf("table size is %d number of hash func is %d \n",bf_table_size,num_of_hash_func);
+    num_of_hash_func = (long long) ceil(table_factor*0.69314);
+    printf("table size is %lld number of hash func is %d \n",bf_table_size,num_of_hash_func);
    
   
     bf_unique = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
@@ -345,7 +345,7 @@ void test_decode_partial(char* bf_path) {
   BloomFilter* bf;
   hattrie_t* trie_repeat;
   hattrie_t* trie_orig;
-  int table_size=0;
+  long long table_size=0;
   int num_of_hash=0;
   int bf_results[2];
 
@@ -375,15 +375,15 @@ void test_decode_partial(char* bf_path) {
 //this function get a read file path, genome file path, and a label
 //encodes the file, which create a repeat_file, bloom-filter file , false negatives file, false positives file like in encoding test
 // and then decodes it which results in decoded file
-void test_encode_decode(char * read_file_path, char* genome_file_path, char* label) {
+void test_encode_decode(char * read_file_path, char* genome_file_path, char* label, int with_zip) {
     int read_size=0; //the size of the reads
     int table_factor; //arbitrary
-    int num_of_reads;
-    int bf_table_size = table_factor*num_of_reads;
-    int num_of_hash_func;
+    long long num_of_reads;
+    long long bf_table_size = table_factor*num_of_reads;
+    unsigned int num_of_hash_func;
     int results[2];
     int size=0;
-    int read_num=0;
+    long long read_num=0;
     FILE* genome_f;
     BloomFilter* bf_unique; //BF for the unique tries
   //  char* output_label=(char *)malloc(50); //label name for the output files
@@ -418,16 +418,25 @@ void test_encode_decode(char * read_file_path, char* genome_file_path, char* lab
     read_size = size-2;
     genome_f = fopen(genome_file_path, "r");
     table_factor = 10; //arbitrary
-    bf_table_size = table_factor*read_num;
-    num_of_hash_func = (int) ceil(table_factor*0.69314);
-    printf("table size is %d number of hash func is %d \n",bf_table_size,num_of_hash_func);
+    bf_table_size = (long long)table_factor*read_num;
+    num_of_hash_func = (unsigned int) ceil(table_factor*0.69314);
+    printf("read num is %lld table size is %lld table factor is %u number of hash func is %u \n",read_num, bf_table_size,table_factor, num_of_hash_func);
 
 
     bf_unique = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
     trie_fp = hattrie_create();
     trie_fn = hattrie_create();
-
+    printf("start encoding\n");
     encode(trie_unique, genome_f, bf_unique, trie_fp, trie_fn ,read_size, label, bf_table_size,num_of_hash_func);
+    printf("done encoding\n");
+
+//zippin
+    if (with_zip==1){
+      printf("zipping files\n");
+      zip_encoded_files(label);
+      printf("done zipping files\n");
+    }
+
 
     fclose(genome_f);
     bloom_filter_free(bf_unique);
@@ -443,6 +452,14 @@ void test_encode_decode(char * read_file_path, char* genome_file_path, char* lab
     make_path(fp_file_path,directory, label, "fp_unique");
     make_path(bf_path,directory, label, "unique_bf");
 
+
+//unzippin
+    if (with_zip==1){
+      printf("unzipping files\n");
+      zip_encoded_files(label);
+      printf("done unzipping files\n");
+    }
+    printf("start decoding\n");
     decode(bf_path, repeat_file_path, genome_file_path, fn_file_path, fp_file_path, read_size, label);
     printf("done test_encode_decode \n");
 }
@@ -461,8 +478,10 @@ printf("done test_load_to_trie_and_print test \n");
 //arg3 = reads file
 //arg4 = genome reference file
 int main(int argc, char *argv[]) {
+  char file_path[1024]="";
+  char file_path2[1024]="";
   char* test_number=NULL;
-  int num_of_reads=0;
+  long long num_of_reads=0;
   test_number = argv[1];
   if (strcmp(test_number, "1") ==0) {
     printf("doing test 1 \n");
@@ -477,7 +496,10 @@ int main(int argc, char *argv[]) {
     printf("done test 2");
 
   }
-
+/////////////
+//test 3- encoing
+/////////////////
+// ./test_barcode 3 test_3 ../data/test.fasta ../data/hg19_samp.fa
   if (strcmp(test_number, "3") ==0) {
     printf("doing test 3 \n");
     test_encode(argv[3], argv[4], argv[2]);
@@ -491,15 +513,18 @@ int main(int argc, char *argv[]) {
     printf("done test 4");
 
   }
-
+/////////////
+//test 5- deencoing
+/////////////////
 //arg1 test number
 //arg2 = label
 //arg3 = direory of files 
 //arg4 = referenc genome
 //arg5 = number of reads
+// ./test_barcode 5 test_3 . ../data/hg19_samp.fa 100
   if (strcmp(test_number, "5") ==0) {
     printf("doing test 5 of decoding \n");
-    if (sscanf (argv[5], "%i", &num_of_reads)!=1) { printf ("error - argument 5 not an integer"); }
+    if (sscanf (argv[5], "%lld", &num_of_reads)!=1) { printf ("error - argument 5 not an integer"); }
     test_decode(num_of_reads,argv[4], argv[3], argv[2]);
     printf("done test 5");
 
@@ -524,9 +549,98 @@ int main(int argc, char *argv[]) {
 
   if (strcmp(test_number, "7") ==0) {
     printf("doing test 7 of encoding file and decoding it \n");
-    test_encode_decode(argv[3], argv[4], argv[2]);
+    test_encode_decode(argv[3], argv[4], argv[2], 0);
     printf("done test 7");
   }
+
+
+//arg1 = number of test
+//arg2 = label
+//arg3 = reads file
+// ./test_barcode 8 test_8 ../data/test.fasta
+//zip test- will make repeat and unique files from fasta file, and zip them
+  if (strcmp(test_number, "8") ==0) {
+    printf("doing test 8 \n");
+    test_make_unique_and_repeat_files(argv[3], argv[2]);
+    strcat(file_path, argv[2]);
+    strcat(file_path, "_repeat.txt");
+    printf("doing zip \n");
+    zip(file_path, argv[2],file_path);
+    memset(&file_path[0], 0, sizeof(file_path));
+    strcat(file_path, argv[2]);
+    strcat(file_path, "_unique.txt");
+    printf("doing zip unique \n");
+    zip(file_path, argv[2],file_path);
+    printf("done test 8");
+
+  }
+//arg1 = number of test
+//arg2 = label of archvie
+//unzip test
+
+  if (strcmp(test_number, "9") ==0) {
+    printf("doing test 9 \n");
+    strcat(file_path, argv[2]);
+    strcat(file_path, "_repeat.txt");
+    printf("doing unzip repeat \n");
+    unzip(argv[2],file_path);
+    memset(&file_path[0], 0, sizeof(file_path));
+    strcat(file_path, argv[2]);
+    strcat(file_path, "_unique.txt");
+    printf("doing zip unique \n");
+    unzip( argv[2],file_path);
+    printf("done test 9");
+
+  }
+
+///////////////////////////////////
+//test 10- encoding +zipping files
+//arg1 = number of test
+//arg2 = label
+//arg3 = reads file
+//arg4 = genome reference file
+// ./test_barcode 10 test_10  ../data/test.fasta  ../data/hg19_samp.fa
+///////////////////////////////////
+  if (strcmp(test_number, "10") ==0) {
+    printf("doing test 10 of encoding and zipping files \n");
+    test_encode(argv[3], argv[4], argv[2]);
+    zip_encoded_files(argv[2]);
+    printf("done test 10");
+
+  }
+
+/////////////
+//test 11-unizip archive + dencoding
+/////////////////
+//arg1 test number
+//arg2 = label (of archive )
+//arg3 = direory of files 
+//arg4 = referenc genome
+//arg5 = length of reads
+// ./test_barcode 11 test_10 . ../data/hg19_samp.fa 100
+  if (strcmp(test_number, "11") ==0) {
+    printf("doing test 5 of unzip+ decoding \n");
+    if (sscanf (argv[5], "%lld", &num_of_reads)!=1) { printf ("error - argument 5 not an integer"); }
+    printf("unzippin \n");
+    unzip_encoded_files(argv[2]);
+    printf("decoding \n");
+    test_decode(num_of_reads,argv[4], argv[3], argv[2]);
+    printf("done test 5");
+
+  }
+
+
+//arg1 = number of test
+//arg2 = label
+//arg3 = reads file
+//arg4 = genome reference file
+
+  if (strcmp(test_number, "12") ==0) {
+    printf("doing test 12 of encoding file and decoding it and zipping \n");
+    test_encode_decode(argv[3], argv[4], argv[2], 1);
+    printf("done test 12");
+  }
+
 
 
 

@@ -1,5 +1,15 @@
 #ifndef _BARCODE_H_
 #define _BARCODE_H
+#if defined(__GNUC__)
+  // Ensure we get the 64-bit variants of the CRT's file I/O calls (TAKEN FROM MINIZ EXAMPLES - yeinhorn)
+  #ifndef _FILE_OFFSET_BITS
+    #define _FILE_OFFSET_BITS 64
+  #endif
+  #ifndef _LARGEFILE64_SOURCE
+    #define _LARGEFILE64_SOURCE 1
+  #endif
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -11,6 +21,15 @@
 
 #include "bloom-filter.h"
 #include "hash-string.h"
+typedef unsigned char uint8;
+typedef unsigned short uint16;
+typedef unsigned int uint;
+
+char* copy_file_to_mem(char* file_path);
+int zip(char* file_path, char* archive_prefix_name, char* file_name);
+int unzip(char* archive_prefix_name, char* file_name);
+int zip_encoded_files(char* archive_prefix_name);
+int unzip_encoded_files(char* archive_prefix_name);
 void hattrie_iteration(hattrie_t* T, char* m_label, char* output_label);
 void make_repeat_and_unique_tries(char* reads_file_path, hattrie_t* trie_unique, hattrie_t* trie_repeat, int* results);
 void hash_trie_into_bf(hattrie_t* T, BloomFilter* bf);

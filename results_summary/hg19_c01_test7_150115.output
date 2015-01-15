@@ -1,0 +1,65 @@
+doing test 7 of encoding file and decoding it 
+opening file to read 
+finished opening file 
+iterating through keys for repeat trie 
+done.
+table size is 31339050 number of hash func is 7 
+start querying unique BF through genome 
+there where total of 2897264187 windows, in which 29343618 of original strands and 29342845 of complementary strands gave true for being in the BF 
+start checking for false positive 
+we had 50346374 false_positives out of 52560703 reads 
+iterating through keys for fp_unique trie 
+done.
+start checking for false negative 
+we had 919576 false_positives out of 3133905 reads 
+iterating through keys for fn_unique trie 
+done.
+printing bloom filter
+done.
+done printing bloom filter
+done encode
+final path is ./hg19_c01_test7_150115_repeat.txt 
+final path is ./hg19_c01_test7_150115_fn_unique.txt 
+final path is ./hg19_c01_test7_150115_fp_unique.txt 
+final path is ./hg19_c01_test7_150115_unique_bf.txt 
+start decoding 
+loading bf 
+table size is 31339050, num of hash 7 
+loading file to trie 
+loaded 3257 reads 
+loading file to trie 
+loaded 919577 reads 
+loading file to trie 
+loaded 50346375 reads 
+there where total of 2897264187 windows, in which 29343618 of original strands and 29342845 of complementary strands gave true for being in the BF 
+iterating through keys for decoded_file trie 
+done.
+done test_encode_decode 
+done test 7
+
+	Command being timed: "./test_barcode 7 hg19_c01_test7_150115 ../data/fasta_input/hg19.c0.1.fasta ../data/hg19.fa"
+	User time (seconds): 13948.93
+	System time (seconds): 32.43
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 3:54:20
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 51861152
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 4801425
+	Voluntary context switches: 185569
+	Involuntary context switches: 693186
+	Swaps: 0
+	File system inputs: 17071024
+	File system outputs: 10740192
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
+
+
+

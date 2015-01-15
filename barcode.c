@@ -1,4 +1,180 @@
 #include "barcode.h"
+#include "miniz.c"
+
+//************************************************************************************
+// copy_file_to_mem function
+//************************************************************************************
+char* copy_file_to_mem(char* file_path){
+  FILE *f = fopen(file_path, "rb");
+  fseek(f, 0, SEEK_END);
+  long fsize = ftell(f);
+  fseek(f, 0, SEEK_SET);
+  char *memfile = malloc(fsize + 1);
+  fread(memfile, fsize, 1, f);
+  fclose(f);
+  memfile[fsize] = 0;
+  return(memfile);
+}
+
+
+
+//************************************************************************************
+//zip function gets a file path, a file name, archive name ,
+// and adds the file into the archive with the name "file_name", if archive doesn't
+//exist it will create it
+//************************************************************************************
+int zip(char* file_path, char* archive_prefix_name, char* file_name)
+{
+  mz_bool status;
+  char archive_filename[1024]=""; //name of the file you want to name your data 
+  char* data; //your data t4hat you want to compress
+  const char *s_pComment = "This is a comment";
+  strcat(archive_filename,archive_prefix_name);
+  strcat(archive_filename, ".zip");
+  data=copy_file_to_mem(file_path);
+  printf("done memcopy\n");
+    // Add a new file to the archive. Note this is an IN-PLACE operation, so if it fails your archive is probably hosed (its central directory may not be complete) but it should be recoverable using zip -F or -FF. So use caution with this guy.
+    // A more robust way to add a file to an archive would be to read it into memory, perform the operation, then write a new archive out to a temp file and then delete/rename the files.
+    // Or, write a new archive to disk to a temp file, then delete/rename the files. For this test this API is fine.
+    status = mz_zip_add_mem_to_archive_file_in_place(archive_filename, file_name, data, strlen(data), s_pComment, (uint16)strlen(s_pComment), MZ_BEST_COMPRESSION);
+    if (!status)
+    {
+      printf("mz_zip_add_mem_to_archive_file_in_place failed!\n");
+      free(data);
+      return EXIT_FAILURE;
+    }
+  free(data);
+  remove(file_path); //deleting original file
+  printf("Success.\n");
+  return EXIT_SUCCESS;
+}
+
+//************************************************************************************
+//unzip function
+//************************************************************************************
+//will unzip a file from a zip archive
+//////////////////////////////
+int unzip(char* archive_prefix_name, char* file_name)
+{
+  size_t uncomp_size;
+  int i;
+  mz_zip_archive zip_archive;
+  mz_bool status;
+  char archive_filename[1024]=""; //name of the file you want to name your data 
+  const char *s_pComment = "This is a comment";
+  void *p;
+  FILE *fp;
+  strcat(archive_filename,archive_prefix_name);
+  strcat(archive_filename, ".zip");
+  fp=fopen(file_name, "w");
+  // Now try to open the archive.
+  memset(&zip_archive, 0, sizeof(zip_archive));
+  status = mz_zip_reader_init_file(&zip_archive, archive_filename, 0);
+  if (!status)
+  {
+    printf("mz_zip_reader_init_file() failed!\n");
+    return EXIT_FAILURE;
+  }
+  printf("done1\n");
+//  for (i = 0; i < (int)mz_zip_reader_get_num_files(&zip_archive); i++)
+//  {
+    // Try to extract all the files to the heap.
+    p = mz_zip_reader_extract_file_to_heap(&zip_archive, file_name, &uncomp_size, 0);
+  printf("done2\n");
+//    mz_zip_extract_archive_file_to_heap(archive_filename, filename_name,
+//        size_t *pSize, mz_uint zip_flags);
+    if (!p)
+    {
+      printf("mz_zip_reader_extract_file_to_heap() failed!\n");
+      mz_zip_reader_end(&zip_archive);
+      return EXIT_FAILURE;
+    }
+    printf("Successfully extracted file \"%s\", size %u\n", file_name, (uint)uncomp_size);
+    fprintf(fp,"%s", (const char *)p);
+
+    // We're done.
+    mz_free(p);
+    fclose(fp);
+
+//  }
+
+    // Close the archive, freeing any resources it was using
+  mz_zip_reader_end(&zip_archive);
+  printf("Success.\n");
+  return EXIT_SUCCESS;
+
+}
+
+//************************************************************************************
+//zip_encode_files function will encode repeat, fn,fp,bf files of an encoded file
+//************************************************************************************
+int zip_encoded_files(char* archive_prefix_name)
+{
+  char archive_filename[1024]=""; //name of the file you want to name your data 
+  char file_name[1024]=""; 
+
+  strcat(archive_filename,archive_prefix_name);
+  strcat(archive_filename, ".zip");
+  
+  strcat(file_name, archive_prefix_name);
+  strcat(file_name, "_repeat.txt");
+  zip(file_name ,archive_prefix_name, file_name);
+
+  memset(&file_name[0], 0, sizeof(file_name));
+  strcat(file_name, archive_prefix_name);
+  strcat(file_name, "_fn_unique.txt");
+  zip(file_name ,archive_prefix_name, file_name);
+
+  memset(&file_name[0], 0, sizeof(file_name));
+  strcat(file_name, archive_prefix_name);
+  strcat(file_name, "_fp_unique.txt");
+  zip(file_name ,archive_prefix_name, file_name);
+
+ // memset(&file_name[0], 0, sizeof(file_name));
+ // strcat(file_name, archive_prefix_name);
+ // strcat(file_name, "_unique_bf.txt");
+ // zip(file_name ,archive_prefix_name, file_name);
+}
+
+//************************************************************************************
+//unzip_encode_files function will unzip repeat, fn,fp,bf files of an encoded file
+//************************************************************************************
+int unzip_encoded_files(char* archive_prefix_name)
+{
+  char archive_filename[1024]=""; //name of the file you want to name your data 
+  char file_name[1024]="";
+
+  strcat(archive_filename,archive_prefix_name);
+  strcat(archive_filename, ".zip");
+
+  strcat(file_name, archive_prefix_name);
+  strcat(file_name, "_repeat.txt");
+  unzip(archive_prefix_name, file_name);
+
+  memset(&file_name[0], 0, sizeof(file_name));
+  strcat(file_name, archive_prefix_name);
+  strcat(file_name, "_fn_unique.txt");
+  unzip(archive_prefix_name, file_name);
+
+  memset(&file_name[0], 0, sizeof(file_name));
+  strcat(file_name, archive_prefix_name);
+  strcat(file_name, "_fp_unique.txt");
+  unzip(archive_prefix_name, file_name);
+
+//  memset(&file_name[0], 0, sizeof(file_name));
+//  strcat(file_name, archive_prefix_name);
+//  strcat(file_name, "_unique_bf.txt");
+//  unzip(archive_prefix_name, file_name);
+}
+
+
+
+
+
+
+
+
+
 //************************************************************************************
 //check_legal_char function
 //************************************************************************************
@@ -123,12 +299,12 @@ void make_repeat_and_unique_tries(char* reads_file_path, hattrie_t* trie_unique,
   int size = 80; //size of read, default value=80 and increases in case of need
   int  pos; //index to buffer
   int c; //reading character
-  int line_number=1;
-  int read_num =0;
+  long long line_number=1;
+  long long read_num =0;
   char *buffer = (char *)malloc(size);
-  int cur_line_num = 1;
+  long long cur_line_num = 1;
   int has_N; //1 if line contains 'N', '0' otherwise
-  int unique_read_num=0;
+  long long unique_read_num=0;
   int is_single_line=0;
 
   printf("opening file to read \n"); 
@@ -285,15 +461,15 @@ void query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* 
   int in_bf; //1 if cur_window in genome bloom-filter, 0 otherwisei
   int in_bf_comp; //1 if comp_window in genome bloom-filter, 0 otherwise
   int cur_window_index=0; //current index in the window
-  int line_number =1; // count number of line in file
+  long long line_number =1; // count number of line in file
   char* cur_window; //assuming read size is no larger then 600 chars
   char* complementary_window; //complementary strand to cur_window
   char* prev_window;
   char* prev_comp_window;
   int c; //holds current character
-  long  int count_in_bf=0;
-  long int count_comp_in_bf=0;
-  long int count_windows=0;
+  long  long count_in_bf=0;
+  long long count_comp_in_bf=0;
+  long long count_windows=0;
   value_t* m_key;
   printf("start querying unique BF through genome \n");
   cur_window =  (char *)malloc(read_size+2); //+1 to '\n' , and +1 to'\0'
@@ -380,7 +556,7 @@ void query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* 
   free(prev_window);
   free(complementary_window);
   free(prev_comp_window);
-  printf("there where total of %ld windows, in which %ld of original strands and %ld of complementary strands gave true for being in the BF \n",count_windows, count_in_bf, count_comp_in_bf);
+  printf("there where total of %lld windows, in which %lld of original strands and %lld of complementary strands gave true for being in the BF \n",count_windows, count_in_bf, count_comp_in_bf);
 }
              
 //************************************************************************************
@@ -392,11 +568,11 @@ void query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* 
 ///in our case put all the windows from the reference genome that bloome filter said are in the unique read but are not (due to bloom filter false positive)
 //************************************************************************************
 void check_fp(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_push,  hattrie_t* trie_to_check_true) {
-    int count = 0;
-    int total_count =0;
+    long long count = 0;
+    long long total_count =0;
     value_t* value;
     value_t  v;
-    int repeat_number;
+    long long repeat_number;
     size_t len;
     char* check_key; //current read from trie_to_check to see if in trie_true
     char* m_key; // result of key when checking if trie_to_check is in trie_true
@@ -423,7 +599,7 @@ void check_fp(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_pu
        
         hattrie_iter_next(i);
     }
-    printf("we had %d false_positives out of %d reads \n", count, total_count);
+    printf("we had %lld false_positives out of %lld reads \n", count, total_count);
     hattrie_iter_free(i);
 //    hattrie_iteration(trie_real_unique, "true_unique_fn", "testing"); //TMP- REOMVE!!!!
 //    hattrie_free(trie_real_unique);//TMP- REOMVE!!!!
@@ -466,10 +642,10 @@ char *byte_to_binary(int x)
 //************************************************************************************
 void print_bf_binary(BloomFilter* bf, int table_size, int num_of_hash_func, char* label_1, char* label_2) {
   unsigned char* bf_array; //array to load bf into in order to print it
-  int array_size = 0;
+  long long array_size = 0;
   FILE *fp;
   char output_path[1024]="";
-  int index=0;
+  long long index=0;
   char* cur_byte;
   strcat(output_path, "./");
   if (label_1) {
@@ -504,10 +680,10 @@ void print_bf_binary(BloomFilter* bf, int table_size, int num_of_hash_func, char
 ////////////////////////////////
 void print_bf(BloomFilter* bf, int table_size, int num_of_hash_func, char* label_1, char* label_2) {
   unsigned char* bf_array; //array to load bf into in order to print it
-  int array_size = 0;
+  long long array_size = 0;
   FILE *fp;
   char output_path[1024]="";
-  int index=0;
+  long long index=0;
   char* cur_byte;
   strcat(output_path, "./");
   if (label_1) {
@@ -546,18 +722,21 @@ void print_bf(BloomFilter* bf, int table_size, int num_of_hash_func, char* label
 void encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, hattrie_t* trie_fp, hattrie_t* trie_fn ,int read_size, char* label, int bf_table_size,int num_of_hash_func) {
     hattrie_t* trie_genome_unique; //put 'accepts' (everything that uniqe BF says yes that it's in genome) into a trie
     hattrie_t* trie_genome_true; //holds reads that really mapped into the genome reference
-
+    
+    printf("hasing trie into bf \n");
     hash_trie_into_bf(trie_unique, bf);
     trie_genome_unique = hattrie_create(); //contain all the accepts windows
+    printf("query bf with genome \n");
     query_bf_with_genome(bf, genome,trie_genome_unique, read_size);
     trie_genome_true = hattrie_create();     //reads that really maps to the genome (true accepts)
     printf("start checking for false positive \n");
     check_fp(trie_unique,trie_genome_unique, trie_fp, trie_genome_true);
-
+    printf("done checking for false positve, printing it \n");
     //hattrie_free(trie_genome_unique);
     hattrie_iteration(trie_fp, "fp_unique", label);
     printf("start checking for false negative \n");
     check_fn(trie_unique,trie_genome_true, trie_fn);
+    printf("done checking for false negative, freeing genome_unique and genome_true, and printing it \n");
     hattrie_free(trie_genome_true);
     hattrie_free(trie_genome_unique);
     hattrie_iteration(trie_fn, "fn_unique", label);
@@ -577,17 +756,17 @@ void encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, hattrie_t* tr
 //************************************************************************************
 void load_bf(char* bf_path, BloomFilter** bf, int* bf_results) {
   FILE* bf_file;
-  int table_size=0;
+  long long table_size=0;
   int num_of_hash=0;
   char* bf_array;
   int c;
-  int ind=0;  
-  int array_size=0;
+  long long ind=0;  
+  long long array_size=0;
   printf("loading bf \n");
   bf_file = fopen(bf_path, "r");
-  fscanf(bf_file, "%d %d\n", &table_size, &num_of_hash);
+  fscanf(bf_file, "%lld %d\n", &table_size, &num_of_hash);
 
-  printf("table size is %d, num of hash %d \n", table_size, num_of_hash); 
+  printf("table size is %lld, num of hash %d \n", table_size, num_of_hash); 
   *bf = bloom_filter_new(table_size, string_hash, num_of_hash);
   array_size = (table_size + 7) / 8;
 
@@ -617,16 +796,16 @@ void load_bf(char* bf_path, BloomFilter** bf, int* bf_results) {
 //************************************************************************************
 void load_file_to_trie(char* reads_file_path, hattrie_t* reads_trie) {
   int size = 50; //size of read, default value=80 and increases in case of need
-  int  pos; //index to buffer
+  long long  pos; //index to buffer
   int c; //reading character
-  int line_number=1;
-  int read_num =0;
+  long long line_number=1;
+  long long read_num =0;
   char *buffer = (char *)malloc(size);
-  int cur_line_num = 1;
+  long long cur_line_num = 1;
   FILE* f;
   value_t* m_key;
   int len;
-  int old_repeat_num; //holds value of number of repeats of a key before enetring another same key
+  long long old_repeat_num; //holds value of number of repeats of a key before enetring another same key
   printf("loading file to trie \n");
   f = fopen(reads_file_path, "r");
   if(f){
@@ -661,7 +840,7 @@ void load_file_to_trie(char* reads_file_path, hattrie_t* reads_trie) {
     fprintf(stderr, "Error: couldnt open file %s \n",reads_file_path);
   }
   free(buffer);
-  printf("loaded %d reads \n", read_num);
+  printf("loaded %lld reads \n", read_num);
 }
 
 /////////////////////////////////
@@ -675,16 +854,16 @@ void decode_unique_reads_from_genome(char* genome_file_path, hattrie_t* trie_fp,
   FILE* genome_file;
   int in_bf; //1 if cur_window in genome bloom-filter, 0 otherwisei
   int in_bf_comp; //1 if comp_window in genome bloom-filter, 0 otherwise
-  int cur_window_index=0; //current index in the window
-  int line_number =1; // count number of line in file
+  long long cur_window_index=0; //current index in the window
+  long long line_number =1; // count number of line in file
   char* cur_window; //assuming read size is no larger then 600 chars
   char* complementary_window; //complementary strand to cur_window
   char* prev_window;
   char* prev_comp_window;
   int c; //holds current character
-  long  int count_in_bf=0;
-  long int count_comp_in_bf=0;
-  long int count_windows=0;
+  long  long count_in_bf=0;
+  long long count_comp_in_bf=0;
+  long long count_windows=0;
   value_t* m_key;
 
   genome_file = fopen(genome_file_path, "r");
@@ -775,7 +954,7 @@ void decode_unique_reads_from_genome(char* genome_file_path, hattrie_t* trie_fp,
   free(prev_window);
   free(complementary_window); 
   free(prev_comp_window);
-  printf("there where total of %ld windows, in which %ld of original strands and %ld of complementary strands gave true for being in the BF \n",count_windows, count_in_bf, count_comp_in_bf); 
+  printf("there where total of %lld windows, in which %lld of original strands and %lld of complementary strands gave true for being in the BF \n",count_windows, count_in_bf, count_comp_in_bf); 
 }     
         
 //////////////////////////////////////////////////
