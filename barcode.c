@@ -56,7 +56,7 @@ int zip(char* file_path, char* archive_prefix_name, char* file_name)
 //////////////////////////////
 int unzip(char* archive_prefix_name, char* file_name)
 {
-  size_t uncomp_size;
+  long long uncomp_size;
   int i;
   mz_zip_archive zip_archive;
   mz_bool status;
@@ -82,7 +82,7 @@ int unzip(char* archive_prefix_name, char* file_name)
     p = mz_zip_reader_extract_file_to_heap(&zip_archive, file_name, &uncomp_size, 0);
   printf("done2\n");
 //    mz_zip_extract_archive_file_to_heap(archive_filename, filename_name,
-//        size_t *pSize, mz_uint zip_flags);
+//        long long *pSize, mz_uint zip_flags);
     if (!p)
     {
       printf("mz_zip_reader_extract_file_to_heap() failed!\n");
@@ -112,28 +112,44 @@ int zip_encoded_files(char* archive_prefix_name)
 {
   char archive_filename[1024]=""; //name of the file you want to name your data 
   char file_name[1024]=""; 
-
-  strcat(archive_filename,archive_prefix_name);
-  strcat(archive_filename, ".zip");
+  char buffer[1024]="";
   
   strcat(file_name, archive_prefix_name);
   strcat(file_name, "_repeat.txt");
-  zip(file_name ,archive_prefix_name, file_name);
+ // zip(file_name ,archive_prefix_name, file_name);
+  snprintf(buffer, sizeof(buffer), "gzip -f %s", file_name);
+  system(buffer);
+ // strcat(archive_filename,archive_prefix_name);
+//  strcat(archive_filename, ".zip");
+
+
 
   memset(&file_name[0], 0, sizeof(file_name));
   strcat(file_name, archive_prefix_name);
   strcat(file_name, "_fn_unique.txt");
-  zip(file_name ,archive_prefix_name, file_name);
+//  zip(file_name ,archive_prefix_name, file_name);
+  memset(&buffer[0], 0, sizeof(buffer));
+  snprintf(buffer, sizeof(buffer), "gzip -f %s", file_name);
+  system(buffer);
+
 
   memset(&file_name[0], 0, sizeof(file_name));
   strcat(file_name, archive_prefix_name);
   strcat(file_name, "_fp_unique.txt");
-  zip(file_name ,archive_prefix_name, file_name);
+//  zip(file_name ,archive_prefix_name, file_name);
+  memset(&buffer[0], 0, sizeof(buffer));
+  snprintf(buffer, sizeof(buffer), "gzip -f %s", file_name);
+  system(buffer);
 
- // memset(&file_name[0], 0, sizeof(file_name));
- // strcat(file_name, archive_prefix_name);
- // strcat(file_name, "_unique_bf.txt");
+
+  memset(&file_name[0], 0, sizeof(file_name));
+  strcat(file_name, archive_prefix_name);
+  strcat(file_name, "_unique_bf.txt");
  // zip(file_name ,archive_prefix_name, file_name);
+  memset(&buffer[0], 0, sizeof(buffer));
+  snprintf(buffer, sizeof(buffer), "gzip -f %s", file_name);
+  system(buffer);
+
 }
 
 //************************************************************************************
@@ -143,28 +159,45 @@ int unzip_encoded_files(char* archive_prefix_name)
 {
   char archive_filename[1024]=""; //name of the file you want to name your data 
   char file_name[1024]="";
+  char buffer[1024]="";
 
-  strcat(archive_filename,archive_prefix_name);
-  strcat(archive_filename, ".zip");
+//  strcat(archive_filename,archive_prefix_name);
+//  strcat(archive_filename, ".zip");
 
   strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_repeat.txt");
-  unzip(archive_prefix_name, file_name);
-
-  memset(&file_name[0], 0, sizeof(file_name));
-  strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_fn_unique.txt");
-  unzip(archive_prefix_name, file_name);
-
-  memset(&file_name[0], 0, sizeof(file_name));
-  strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_fp_unique.txt");
-  unzip(archive_prefix_name, file_name);
-
-//  memset(&file_name[0], 0, sizeof(file_name));
-//  strcat(file_name, archive_prefix_name);
-//  strcat(file_name, "_unique_bf.txt");
+  strcat(file_name, "_repeat.txt.gz");
 //  unzip(archive_prefix_name, file_name);
+  snprintf(buffer, sizeof(buffer), "gunzip -f %s", file_name);
+  system(buffer);
+
+
+  memset(&file_name[0], 0, sizeof(file_name));
+  strcat(file_name, archive_prefix_name);
+  strcat(file_name, "_fn_unique.txt.gz");
+//  unzip(archive_prefix_name, file_name);
+  memset(&buffer[0], 0, sizeof(buffer));
+  snprintf(buffer, sizeof(buffer), "gunzip -f %s", file_name);
+  system(buffer);
+
+
+
+  memset(&file_name[0], 0, sizeof(file_name));
+  strcat(file_name, archive_prefix_name);
+  strcat(file_name, "_fp_unique.txt.gz");
+//  unzip(archive_prefix_name, file_name);
+  memset(&buffer[0], 0, sizeof(buffer));
+  snprintf(buffer, sizeof(buffer), "gunzip -f %s", file_name);
+  system(buffer);
+
+
+  memset(&file_name[0], 0, sizeof(file_name));
+  strcat(file_name, archive_prefix_name);
+  strcat(file_name, "_unique_bf.txt.gz");
+//  unzip(archive_prefix_name, file_name);
+  memset(&buffer[0], 0, sizeof(buffer));
+  snprintf(buffer, sizeof(buffer), "gunzip -f %s", file_name);
+  system(buffer);
+
 }
 
 
@@ -245,18 +278,20 @@ int handle_line(char *line, hattrie_t* trie_unique, hattrie_t* trie_repeat, int 
 //this function take a hattrie, and iterate on all of its keys,
 //and write it to a file located in  user given output path (cwd if none) and with a label
 //the label is the name for the trie
+//with_duplicates==1, then it will print each key as the number of its value (with duplicates)
+//otherwise only once
 //************************************************************************************
-void hattrie_iteration(hattrie_t* T, char* m_label, char* output_label)
+int hattrie_iteration(hattrie_t* T, char* m_label, char* output_label, int with_duplicates)
 {   
     printf("iterating through keys for %s trie \n", m_label);
 
     hattrie_iter_t* i = hattrie_iter_begin(T, false);
 
-    size_t count = 0;
+    long long count = 0;
     value_t* value;
     value_t  v;
     int repeat_number;
-    size_t len;
+    long long len;
     const char* key;
     FILE *fp;
     char output_path[1024]="";
@@ -274,17 +309,74 @@ void hattrie_iteration(hattrie_t* T, char* m_label, char* output_label)
 
         key = hattrie_iter_key(i, &len);
         value   = hattrie_iter_val(i);
-        for(repeat_number = 1; repeat_number <= *value; repeat_number++){       
-          fprintf(fp, "%s", key); 
+        if (with_duplicates==1){
+          for(repeat_number = 1; repeat_number <= *value; repeat_number++){       
+            fprintf(fp, "%s", key); 
+          }
+        }  
+        else {
+          fprintf(fp, "%s", key);
         }
         hattrie_iter_next(i);
     }
     hattrie_iter_free(i);
-    
     fclose(fp);
-    printf("done.\n");
+    printf("done iterating.\n");
+    return(1);
 }
 
+
+
+//************************************************************************************
+//hattrie_iteration function
+//************************************************************************************
+//this function take a hattrie, and iterate on all of its keys,
+//and write it to a file located in  user given output path (cwd if none) and with a label
+//the label is the name for the trie
+//************************************************************************************
+int hattrie_iteration_2(hattrie_t* T, FILE* fp, int with_duplicates)
+{
+    printf("doing hatrie_iteration_2\n");
+
+    hattrie_iter_t* i = hattrie_iter_begin(T, false);
+
+    long long count = 0;
+    value_t* value;
+    value_t  v;
+    int repeat_number;
+    long long len;
+    const char* key;
+
+    while (!hattrie_iter_finished(i)) {
+        ++count;
+
+        key = hattrie_iter_key(i, &len);
+        value   = hattrie_iter_val(i);
+        if (with_duplicates==1){
+          for(repeat_number = 1; repeat_number <= *value; repeat_number++){
+            fprintf(fp, "%s", key);
+          }
+       } 
+       else {
+          fprintf(fp, "%s", key);
+       }
+
+        hattrie_iter_next(i);
+    }
+    hattrie_iter_free(i);
+    printf("done iterating.\n");
+    return(1);
+}
+
+
+
+
+void copy_file(FILE* source, FILE* target){
+   char ch;
+   while( ( ch = fgetc(source) ) != EOF )
+      fputc(ch, target);
+   printf("File copied successfully.\n");
+}
 //************************************************************************************
 //make_repeat_and_unique_tries function
 //************************************************************************************
@@ -294,7 +386,7 @@ void hattrie_iteration(hattrie_t* T, char* m_label, char* output_label)
 //************************************************************************************
 
 
-void make_repeat_and_unique_tries(char* reads_file_path, hattrie_t* trie_unique, hattrie_t* trie_repeat, int* results) {
+int make_repeat_and_unique_tries(char* reads_file_path, hattrie_t* trie_unique, hattrie_t* trie_repeat, int* results) {
   FILE* f;
   int size = 80; //size of read, default value=80 and increases in case of need
   int  pos; //index to buffer
@@ -396,12 +488,12 @@ void set_complementary_strand(char * orig_strand, char *comp_strand) {
 //this function gets a poiner to a trie with reads, and a pointer to a bf,
 //and fill the bf with the trie reads
 ////////////////////////////////
-void hash_trie_into_bf(hattrie_t* T, BloomFilter* bf) {
-    size_t count = 0;
+int hash_trie_into_bf(hattrie_t* T, BloomFilter* bf) {
+    long long count = 0;
     value_t* value;
     value_t  v;
     int repeat_number;
-    size_t len;
+    long long len;
     char* key;
 //    BloomFilterValue pkey_to_bf=NULL;
     hattrie_iter_t* i = hattrie_iter_begin(T, false); 
@@ -414,6 +506,7 @@ void hash_trie_into_bf(hattrie_t* T, BloomFilter* bf) {
     }
 //    free(pkey_to_bf);
     hattrie_iter_free(i);
+    return(1);
 }
 
 
@@ -424,11 +517,11 @@ void hash_trie_into_bf(hattrie_t* T, BloomFilter* bf) {
 //if a read in the trie has an accept in the bf, it will print it
 ////////////////////////////////////////////
 void check_if_trie_in_bf(hattrie_t* T, BloomFilter* bf) {
-    size_t count = 0;
+    long long count = 0;
     value_t* value;
     value_t  v;
     int repeat_number;
-    size_t len;
+    long long len;
     char* key;
     int in_bf;
     
@@ -449,6 +542,27 @@ void check_if_trie_in_bf(hattrie_t* T, BloomFilter* bf) {
 }
 
 //************************************************************************************
+//check_accept_read_is_fp function
+//***********************************************************************************
+//trie true: holds inside the references reads to check agains(uniuqe reads)
+//read- is there read we want to check if it's FP or true accept. the read lenght is len
+//if FP we write it to fp_file, else we keep it in trie_true_accept.
+void check_accept_read(char* read, hattrie_t* trie_true,hattrie_t* trie_true_accept, FILE* fp_file, long long len) {
+   char* m_key; // result of key when checking if trie_to_check is in trie_true
+   char* to_check_true_key;
+   m_key = hattrie_tryget(trie_true, read, len);
+   if(m_key==NULL){ //if not in trie_true - means false positive, then insert to FP trie, and also remove it from 
+      fprintf(fp_file, "%s", read);
+
+   }
+   else { //means it is true
+     if (trie_true_accept!= NULL){
+       to_check_true_key = hattrie_get(trie_true_accept, read, len);
+       *to_check_true_key = 1;
+     }
+   }
+}
+//************************************************************************************
 //query_bf_with_genome function
 //************************************************************************************
 //this function gets the bloom filter with the unique reads, the gnome reference file,
@@ -457,7 +571,7 @@ void check_if_trie_in_bf(hattrie_t* T, BloomFilter* bf) {
 //meaning trie_genome uniuqe holds all the unique reads that can map into the genome reference
 //as well as bloom filter's false positive sliding windows
 //************************************************************************************
-void query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* trie_genome_uniqe, int read_size) {
+int query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* trie_genome_uniqe, int read_size) {
   int in_bf; //1 if cur_window in genome bloom-filter, 0 otherwisei
   int in_bf_comp; //1 if comp_window in genome bloom-filter, 0 otherwise
   int cur_window_index=0; //current index in the window
@@ -476,12 +590,12 @@ void query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* 
   complementary_window = (char *)malloc(read_size+2);
   prev_window =  (char *)malloc(read_size);
   prev_comp_window = (char *)malloc(read_size);
-  do { 
+  do {
     c = fgetc(genome_file);
     if (c =='>' ) {
       do {
         c = (char) fgetc(genome_file);
-      } while (c != '\n'); 
+      } while (c != '\n');
       line_number++;
       cur_window_index=0;
       continue;
@@ -491,7 +605,7 @@ void query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* 
       cur_window_index=0;
       continue;
     }
-    if (c=='\n') { 
+    if (c=='\n') {
       line_number++;
       continue;
     }
@@ -501,9 +615,6 @@ void query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* 
   //  if ((line_number+cur_window_index)%1000000==0) {
   //    printf("cur line number is %d line_number\n", line_number);
  //   }
-
-
-
     if (cur_window_index == read_size-1) { // case we start full window or moving to next charcter in sliding window
       // assigning cur_window = prev_window + c
       count_windows++;
@@ -537,6 +648,123 @@ void query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* 
 //      printf("regular window is %s , comp is %s",cur_window, complementary_window);
       strncpy(prev_window, cur_window+1, read_size-1); //will copy from second character 'read_size-1' characters into prev_window ,e.g for 100 will copy  2-100
       strncpy(prev_comp_window, complementary_window, read_size-1); //will copy the first 'read_size-1' (99) characters to prev window
+    }
+    else {
+      cur_window[cur_window_index]=toupper(c);
+      if (toupper(c)=='C') complementary_window[read_size-cur_window_index-1]='G';
+      if (toupper(c)=='G') complementary_window[read_size-cur_window_index-1]='C';
+      if (toupper(c)=='T') complementary_window[read_size-cur_window_index-1]='A';
+      if (toupper(c)=='A') complementary_window[read_size-cur_window_index-1]='T';
+
+      if (cur_window_index==(read_size-2)) { //if it's the last character before window is the size of a read
+        strncpy(prev_window, cur_window, read_size-1); //will copy from first character 'read_size -1' characters into prev_window,e.g for 100 will copy  1-99
+        strncpy(prev_comp_window, complementary_window+1, read_size-1);// will copy from
+      }
+      cur_window_index++;
+    }
+  } while(c != EOF);
+  free(cur_window);
+  free(prev_window);
+  free(complementary_window);
+  free(prev_comp_window);
+  printf("there where total of %lld windows, in which %lld of original strands and %lld of complementary strands gave true for being in the BF \n",count_windows, count_in_bf, count_comp_in_bf);
+  return(1);
+}
+
+
+
+
+//************************************************************************************
+//query_bf_with_genome_2 function
+//************************************************************************************
+//this function gets the bloom filter with the unique reads, the gnome reference file,
+//and the read size, and put all the sliding windows size of read_size in which the
+//bloom filter says that they are in the bloom filter, into trie_genome_unique
+//meaning trie_genome uniuqe holds all the unique reads that can map into the genome reference
+//as well as bloom filter's false positive sliding windows
+//************************************************************************************
+int query_bf_with_genome_2(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* trie_unique, int read_size, hattrie_t* trie_true_accept,char* m_label, char* output_label) {
+  int in_bf; //1 if cur_window in genome bloom-filter, 0 otherwisei
+  int in_bf_comp; //1 if comp_window in genome bloom-filter, 0 otherwise
+  int cur_window_index=0; //current index in the window
+  long long line_number =1; // count number of line in file
+  char* cur_window; //assuming read size is no larger then 600 chars
+  char* complementary_window; //complementary strand to cur_window
+  char* prev_window;
+  char* prev_comp_window;
+  int c; //holds current character
+  long  long count_in_bf=0;
+  long long count_comp_in_bf=0;
+  long long count_windows=0;
+  value_t* m_key;
+  FILE *fp_file;
+  char output_path[1024]="";
+  printf("start querying unique BF through genome \n");
+
+//opening False positive file to write
+  strcat(output_path, "./");
+  if (output_label) {
+    strcat(output_path, output_label);
+    strcat(output_path, "_");
+  }
+  strcat(output_path, m_label);
+  strcat(output_path, ".txt");
+  fp_file=fopen(output_path, "w");
+
+  cur_window =  (char *)malloc(read_size+2); //+1 to '\n' , and +1 to'\0'
+  complementary_window = (char *)malloc(read_size+2);
+  prev_window =  (char *)malloc(read_size);
+  prev_comp_window = (char *)malloc(read_size);
+  do { 
+    c = fgetc(genome_file);
+    if (c =='>' ) {
+      do {
+        c = (char) fgetc(genome_file);
+      } while (c != '\n'); 
+      line_number++;
+      cur_window_index=0;
+      continue;
+    }
+    check_legal_char(c, line_number);
+    if (c=='N') {
+      cur_window_index=0;
+      continue;
+    }
+    if (c=='\n') { 
+      line_number++;
+      continue;
+    }
+
+    if (cur_window_index == read_size-1) { // case we start full window or moving to next charcter in sliding window
+      // assigning cur_window = prev_window + c
+      count_windows++;
+      strncpy(cur_window, prev_window, read_size-1); //will copy prev window (99 charcters) to beginning of cur_Window
+      strncpy(complementary_window+1, prev_comp_window, read_size-1); //will copy prev window (99 charcters) of cur_Window, leaving first character free
+      cur_window[read_size-1] = toupper(c);
+      if (toupper(c)=='C') complementary_window[0]='G';
+      if (toupper(c)=='G') complementary_window[0]='C';
+      if (toupper(c)=='T') complementary_window[0]='A';
+      if (toupper(c)=='A') complementary_window[0]='T';
+      cur_window[read_size] = '\n';
+      cur_window[read_size+1] = '\0';
+      complementary_window[read_size] = '\n';
+      complementary_window[read_size+1] = '\0';
+
+      in_bf = bloom_filter_query(bf_unique, cur_window);
+      if (in_bf!=0) {
+        count_in_bf++;
+        check_accept_read(cur_window, trie_unique, trie_true_accept, fp_file, strlen(cur_window));
+      }
+      in_bf_comp = bloom_filter_query(bf_unique, complementary_window);
+      if (in_bf_comp!=0) {
+        count_comp_in_bf++;
+        check_accept_read(complementary_window, trie_unique, trie_true_accept, fp_file, strlen(complementary_window));
+
+      }
+
+//      printf("regular window is %s , comp is %s",cur_window, complementary_window);
+      strncpy(prev_window, cur_window+1, read_size-1); //will copy from second character 'read_size-1' characters into prev_window ,e.g for 100 will copy  2-100
+      strncpy(prev_comp_window, complementary_window, read_size-1); //will copy the first 'read_size-1' (99) characters to prev window
     } 
     else {
       cur_window[cur_window_index]=toupper(c);
@@ -556,7 +784,10 @@ void query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* 
   free(prev_window);
   free(complementary_window);
   free(prev_comp_window);
+  fclose(fp_file);
   printf("there where total of %lld windows, in which %lld of original strands and %lld of complementary strands gave true for being in the BF \n",count_windows, count_in_bf, count_comp_in_bf);
+  printf("done querying unique BF through genome \n");
+  return(1);
 }
              
 //************************************************************************************
@@ -573,7 +804,7 @@ void check_fp(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_pu
     value_t* value;
     value_t  v;
     long long repeat_number;
-    size_t len;
+    long long len;
     char* check_key; //current read from trie_to_check to see if in trie_true
     char* m_key; // result of key when checking if trie_to_check is in trie_true
     char* push_key;
@@ -604,6 +835,63 @@ void check_fp(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_pu
 //    hattrie_iteration(trie_real_unique, "true_unique_fn", "testing"); //TMP- REOMVE!!!!
 //    hattrie_free(trie_real_unique);//TMP- REOMVE!!!!
 }
+
+
+int check_fp_fn(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_to_check_true, char* m_label, char* output_label) {
+    long long count = 0;
+    long long total_count =0;
+    value_t* value;
+    value_t  v;
+    long long repeat_number;
+    long long len;
+    char* check_key; //current read from trie_to_check to see if in trie_true
+    char* m_key; // result of key when checking if trie_to_check is in trie_true
+    char* push_key;
+    char* to_check_true_key;
+    hattrie_iter_t* i = hattrie_iter_begin(trie_to_check, false);
+    FILE *fp;
+    char output_path[1024]="";
+    printf("start check_fp_fn\n");
+    strcat(output_path, "./");
+    if (output_label) {
+      strcat(output_path, output_label);
+      strcat(output_path, "_");
+    }
+    strcat(output_path, m_label);
+    strcat(output_path, ".txt");
+    fp=fopen(output_path, "w");
+
+
+//    trie_real_unique = hattrie_create();  //TMP- REOMVE!!!!
+    while (!hattrie_iter_finished(i)) {
+        total_count++;
+        check_key = hattrie_iter_key(i, &len);
+        m_key = hattrie_tryget(trie_true, check_key, len);
+        if(m_key==NULL){ //if not in trie_true - means false positive, then insert to FP trie, and also remove it from 
+           fprintf(fp, "%s", check_key);
+        }
+        else { //means it is true 
+           //check if it's in uqine- if not then print it to FN
+          if (trie_to_check_true!= NULL){
+            to_check_true_key = hattrie_get(trie_to_check_true, check_key, len);
+            *to_check_true_key = 1;
+          }
+        }
+
+
+        hattrie_iter_next(i);
+    }
+    printf("we had %lld false_positives out of %lld reads \n", count, total_count);
+    hattrie_iter_free(i);
+    fclose(fp);
+    printf("done check_fp\n");
+    return(1);
+//    hattrie_iteration(trie_real_unique, "true_unique_fn", "testing"); //TMP- REOMVE!!!!
+//    hattrie_free(trie_real_unique);//TMP- REOMVE!!!!
+}
+
+
+
 
 //************************************************************************************
 //check_fn function
@@ -640,7 +928,7 @@ char *byte_to_binary(int x)
 //when first row is table size, second line is number of hash functions,
 //third and then each row contain a byte in binary form
 //************************************************************************************
-void print_bf_binary(BloomFilter* bf, int table_size, int num_of_hash_func, char* label_1, char* label_2) {
+int print_bf_binary(BloomFilter* bf, long long table_size, int num_of_hash_func, char* m_label, char* output_label) {
   unsigned char* bf_array; //array to load bf into in order to print it
   long long array_size = 0;
   FILE *fp;
@@ -648,14 +936,14 @@ void print_bf_binary(BloomFilter* bf, int table_size, int num_of_hash_func, char
   long long index=0;
   char* cur_byte;
   strcat(output_path, "./");
-  if (label_1) {
-    strcat(output_path, label_1);
+  if (output_label) {
+    strcat(output_path, output_label);
     strcat(output_path, "_");
   }
-  strcat(output_path, label_2);
+  strcat(output_path, m_label);
   strcat(output_path, ".txt");
   fp=fopen(output_path, "w"); 
-  fprintf(fp, "%d\n",table_size);
+  fprintf(fp, "%lld\n",table_size);
   fprintf(fp, "%d\n",num_of_hash_func);
   array_size = (table_size + 7) / 8;
   bf_array = (char *)malloc(sizeof(char)*array_size);
@@ -668,6 +956,7 @@ void print_bf_binary(BloomFilter* bf, int table_size, int num_of_hash_func, char
   free(bf_array);
   fclose(fp);
   printf("done.\n");
+  return(1);
 }
 
 
@@ -678,13 +967,14 @@ void print_bf_binary(BloomFilter* bf, int table_size, int num_of_hash_func, char
 //when first row is table size, second line is number of hash functions,
 //and then each row contain a byte with the content of the bloom filter
 ////////////////////////////////
-void print_bf(BloomFilter* bf, int table_size, int num_of_hash_func, char* label_1, char* label_2) {
+int print_bf(BloomFilter* bf, long long table_size, int num_of_hash_func, char* label_1, char* label_2) {
   unsigned char* bf_array; //array to load bf into in order to print it
   long long array_size = 0;
   FILE *fp;
   char output_path[1024]="";
   long long index=0;
   char* cur_byte;
+  printf("start print_bf\n");
   strcat(output_path, "./");
   if (label_1) {
     strcat(output_path, label_1);
@@ -693,18 +983,53 @@ void print_bf(BloomFilter* bf, int table_size, int num_of_hash_func, char* label
   strcat(output_path, label_2);
   strcat(output_path, ".txt");
   fp=fopen(output_path, "w");
-  fprintf(fp, "%d\n",table_size);
+  fprintf(fp, "%lld\n",table_size);
   fprintf(fp, "%d\n",num_of_hash_func);
   array_size = (table_size + 7) / 8;
+  if (MEM_CHECK){
+    printf("before mallocing bf array\n");
+    sleep(20);
+    system("date");
+    system("smem");
+    sleep(1);
+    system("date");
+    system("smem");
+  }
   bf_array = (char *)malloc(sizeof(char)*array_size);
+  if (MEM_CHECK){
+    if (bf_array) {
+      printf("after mallocing bf array\n");
+      sleep(20);
+     system("date");
+      system("smem");
+      sleep(1); 
+    system("date");
+      system("smem"); 
+    }
+  }
+  printf("doing bloomfilter read\n");
   bloom_filter_read(bf, bf_array);
   while (index<(array_size)){
     fprintf(fp, "%c",bf_array[index]);
     index++;
   }
+  sleep(3);
+  printf("freein bf_array\n");
+  system("date");
+  system("smem");
   free(bf_array);
+  if (MEM_CHECK){
+    if (bf_array){
+     sleep(20);
+    system("date");
+     system("smem");
+     sleep(1);
+     system("smem");
+    }
+  }
   fclose(fp);
-  printf("done.\n");
+  printf("done print_bf.\n");
+  return(1);
 } 
 
 
@@ -719,31 +1044,67 @@ void print_bf(BloomFilter* bf, int table_size, int num_of_hash_func, char* label
 // and also wll result in printing bloom-filter, false negatives, false positives into files
 //************************************************************************************
 
-void encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, hattrie_t* trie_fp, hattrie_t* trie_fn ,int read_size, char* label, int bf_table_size,int num_of_hash_func) {
+int encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, hattrie_t* trie_fp, hattrie_t* trie_fn ,int read_size, char* label, long long bf_table_size,int num_of_hash_func) {
     hattrie_t* trie_genome_unique; //put 'accepts' (everything that uniqe BF says yes that it's in genome) into a trie
     hattrie_t* trie_genome_true; //holds reads that really mapped into the genome reference
-    
+    printf("start encode function\n");
+    system("date"); 
+    system("smem");
     printf("hasing trie into bf \n");
     hash_trie_into_bf(trie_unique, bf);
-    trie_genome_unique = hattrie_create(); //contain all the accepts windows
-    printf("query bf with genome \n");
-    query_bf_with_genome(bf, genome,trie_genome_unique, read_size);
-    trie_genome_true = hattrie_create();     //reads that really maps to the genome (true accepts)
-    printf("start checking for false positive \n");
-    check_fp(trie_unique,trie_genome_unique, trie_fp, trie_genome_true);
-    printf("done checking for false positve, printing it \n");
-    //hattrie_free(trie_genome_unique);
-    hattrie_iteration(trie_fp, "fp_unique", label);
+    
+   // trie_genome_unique = hattrie_create(); //contain all the accepts windows
+   // query_bf_with_genome(bf, genome,trie_genome_unique, read_size);
+   trie_genome_unique = hattrie_create(); //will contain all the accepts windows with no FP
+   trie_genome_true = hattrie_create();     //reads that really maps to the genome (true accepts)
+   if (query_bf_with_genome_2(bf, genome,trie_unique, read_size,trie_genome_true,"fp_unique", label)) {
+    if (MEM_CHECK){ 
+     sleep(20);
+    system("date");
+     system("smem");
+     sleep(1);
+     system("smem");
+    }
+   }
+   
+
+//    printf("start checking for false positive \n");
+//    check_fp_fn(trie_unique,trie_genome_unique, trie_genome_true,"fp_unique", label);
+     
+//    printf("done checking for false positve, printing it \n");
+//    system("smem");
+//    printf("freeing genome_unqiue \n");
+//    hattrie_free(trie_genome_unique);
+//    system("free");
     printf("start checking for false negative \n");
-    check_fn(trie_unique,trie_genome_true, trie_fn);
-    printf("done checking for false negative, freeing genome_unique and genome_true, and printing it \n");
+    if (check_fp_fn(trie_genome_true,trie_unique, NULL,"fn_unique", label)){
+  //  check_fn(trie_unique,trie_genome_true, trie_fn);
+      printf("done checking for false negative\n");
+      if (MEM_CHECK){
+        sleep(20);
+    system("date");
+        system("smem");
+        sleep(1);
+        system("smem");   
+      }
+    }
+
+    printf("freeing genome_true \n");
     hattrie_free(trie_genome_true);
-    hattrie_free(trie_genome_unique);
-    hattrie_iteration(trie_fn, "fn_unique", label);
+    if (MEM_CHECK){
+      if (trie_genome_true){
+        sleep(20);
+    system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
+      }
+    }
+  //  hattrie_iteration(trie_fn, "fn_unique", label);
     printf("printing bloom filter\n");
     print_bf(bf, bf_table_size,num_of_hash_func, label, "unique_bf");
     printf("done printing bloom filter\n");
-    printf("done encode\n");
+    printf("done encode function\n");
 }
 
 
@@ -754,7 +1115,7 @@ void encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, hattrie_t* tr
 //it loads the bloom filter file into the bloom filter pointer,
 //and put into the array the bloom filter table-size and the number of hash func
 //************************************************************************************
-void load_bf(char* bf_path, BloomFilter** bf, int* bf_results) {
+int load_bf(char* bf_path, BloomFilter** bf, int* bf_results) {
   FILE* bf_file;
   long long table_size=0;
   int num_of_hash=0;
@@ -762,7 +1123,6 @@ void load_bf(char* bf_path, BloomFilter** bf, int* bf_results) {
   int c;
   long long ind=0;  
   long long array_size=0;
-  printf("loading bf \n");
   bf_file = fopen(bf_path, "r");
   fscanf(bf_file, "%lld %d\n", &table_size, &num_of_hash);
 
@@ -782,7 +1142,8 @@ void load_bf(char* bf_path, BloomFilter** bf, int* bf_results) {
   bf_results[1] = num_of_hash;
   fclose(bf_file);
   free(bf_array);
-
+  printf("done load bf \n");
+  return(1);
 }
 
 
@@ -794,7 +1155,7 @@ void load_bf(char* bf_path, BloomFilter** bf, int* bf_results) {
 //gets file_path and a trie pointer, and load the reads in the file into the trie
 //the value of the each read in the trie is the number of times a read appers
 //************************************************************************************
-void load_file_to_trie(char* reads_file_path, hattrie_t* reads_trie) {
+int load_file_to_trie(char* reads_file_path, hattrie_t* reads_trie) {
   int size = 50; //size of read, default value=80 and increases in case of need
   long long  pos; //index to buffer
   int c; //reading character
@@ -805,8 +1166,12 @@ void load_file_to_trie(char* reads_file_path, hattrie_t* reads_trie) {
   FILE* f;
   value_t* m_key;
   int len;
+  char copy_buffer[200]="";
   long long old_repeat_num; //holds value of number of repeats of a key before enetring another same key
-  printf("loading file to trie \n");
+  printf("memory before load\n");
+  system("date");
+  system("smem");
+  printf("this is the trie %d\n", reads_trie);
   f = fopen(reads_file_path, "r");
   if(f){
       do { // read all lines in file
@@ -817,6 +1182,7 @@ void load_file_to_trie(char* reads_file_path, hattrie_t* reads_trie) {
           if(pos >= size) { // increase buffer length - leave room for 0
             size +=1;
             buffer = (char*)realloc(buffer, size);
+ //           strcpy(copy_buffer,buffer);
           }
         }while(c != EOF && c != '\n');
         buffer[pos] = 0;
@@ -840,8 +1206,11 @@ void load_file_to_trie(char* reads_file_path, hattrie_t* reads_trie) {
     fprintf(stderr, "Error: couldnt open file %s \n",reads_file_path);
   }
   free(buffer);
-  printf("loaded %lld reads \n", read_num);
+  printf("done load file to trie: loaded %lld reads \n", read_num);
+  return(1);
 }
+
+
 
 /////////////////////////////////
 //decode_unique_reads_from_genome
@@ -850,7 +1219,7 @@ void load_file_to_trie(char* reads_file_path, hattrie_t* reads_trie) {
 // a pointer to a bloom filter, read size, and decode the unique reads and loads it into the decoded_reads trie, based on the FP and the BF.
 //if the BF accepts a read from the shifting window in the genome, and it doesn't exist in FP it will load it do decoded-reads
 /////////////////////////////////
-void decode_unique_reads_from_genome(char* genome_file_path, hattrie_t* trie_fp, hattrie_t* trie_decoded_reads, BloomFilter* bf, int read_size){
+int decode_unique_reads_from_genome(char* genome_file_path, hattrie_t* trie_fp, hattrie_t* trie_decoded_reads, BloomFilter* bf, int read_size){
   FILE* genome_file;
   int in_bf; //1 if cur_window in genome bloom-filter, 0 otherwisei
   int in_bf_comp; //1 if comp_window in genome bloom-filter, 0 otherwise
@@ -865,7 +1234,10 @@ void decode_unique_reads_from_genome(char* genome_file_path, hattrie_t* trie_fp,
   long long count_comp_in_bf=0;
   long long count_windows=0;
   value_t* m_key;
-
+  
+  printf("starting decode_unique_reads_from_genome- will load the unique decoded reads into newo uniqu etrie\n");
+  system("date");
+  system("smem");
   genome_file = fopen(genome_file_path, "r");
   cur_window =  (char *)malloc(read_size+2); //+1 to '\n' , and +1 to'\0'
   complementary_window = (char *)malloc(read_size+2);
@@ -955,48 +1327,114 @@ void decode_unique_reads_from_genome(char* genome_file_path, hattrie_t* trie_fp,
   free(complementary_window); 
   free(prev_comp_window);
   printf("there where total of %lld windows, in which %lld of original strands and %lld of complementary strands gave true for being in the BF \n",count_windows, count_in_bf, count_comp_in_bf); 
+  printf("done decode_unique_reads_from_genome\n");
+  return(1);
 }     
         
 //////////////////////////////////////////////////
 //decode
 //////////////////////////////////////////////////
 //this function does the full decoding, it gets paths to a bloom filter with the genome reference accepts, repeated reads trie , genome referece file, FN trie, FP trie as well as read size and output label, and prints out the decoded reads into a file
-void decode(char* bf_path, char* repeat_file_path, char* genome_file_path, char* fn_file_path, char* fp_file_path, int read_size, char* label){
+int decode(char* bf_path, char* repeat_file_path, char* genome_file_path, char* fn_file_path, char* fp_file_path, int read_size, char* label){
   BloomFilter* bf_dec;
   hattrie_t* trie_decoded_reads;
   hattrie_t* trie_fp;
   int bf_results[2];
+  FILE* repeat_file;
+  FILE* decoded_file;
+  FILE* fn_file;
+  char output_path[1024]="";
   printf("start decoding \n");
-
+  printf("copying repeat file to decoded file\n"); 
+// first we will copy all the repeat reads to file, and after we will add unique reads to it
+  strcat(output_path, "./");
+  if (label) {
+    strcat(output_path, label);
+    strcat(output_path, "_");
+  }
+  strcat(output_path, "decoded_file");
+  strcat(output_path, ".txt");
+  decoded_file=fopen(output_path, "w");
+  repeat_file = fopen(repeat_file_path,"r");
+  copy_file(repeat_file, decoded_file);
+  fclose(repeat_file);
+  fn_file = fopen(fn_file_path,"r");
+  copy_file(fn_file, decoded_file);
+  fclose(fn_file);
   trie_decoded_reads = hattrie_create();
   trie_fp = hattrie_create();
-
-  load_bf(bf_path, &bf_dec, bf_results);
+  if (load_bf(bf_path, &bf_dec, bf_results)) {
+    if (MEM_CHECK){
+      sleep(20);
+    system("date");
+      system("smem");
+      sleep(1);
+      system("smem");
+    }
+  }
   //load repeats and false negatives into decoded trie
-  load_file_to_trie(repeat_file_path, trie_decoded_reads);
-  load_file_to_trie(fn_file_path, trie_decoded_reads);
- 
-  load_file_to_trie(fp_file_path, trie_fp);
-  decode_unique_reads_from_genome(genome_file_path, trie_fp, trie_decoded_reads, bf_dec, read_size);
-  hattrie_iteration(trie_decoded_reads, "decoded_file", label);
+//  printf("loading repeat file to trie\n");
+//  load_file_to_trie(repeat_file_path, trie_decoded_reads);
+//  printf("loading fn file to trie \n");
+//  load_file_to_trie(fn_file_path, trie_decoded_reads);
+  printf("loading fp file to trie \n");
+  if (load_file_to_trie(fp_file_path, trie_fp)){
+    if (MEM_CHECK){
+      sleep(20);
+    system("date");
+      system("smem");
+      sleep(1);
+      system("smem");  
+     }
+   }
+  if (decode_unique_reads_from_genome(genome_file_path, trie_fp, trie_decoded_reads, bf_dec, read_size)){
+     if (MEM_CHECK){
+      sleep(20);
+    system("date");
+      system("smem");
+      sleep(1);
+      system("smem");
+     }
+  }
 
+  //adding unique reads to file with already repeat reads
+  hattrie_iteration_2(trie_decoded_reads, decoded_file, 0);
+  fclose(decoded_file);
+//  hattrie_iteration(trie_decoded_reads, "decoded_file", label);
+  printf("freeing bf_dec \n");
   bloom_filter_free(bf_dec);
+  if (MEM_CHECK){
+    if (bf_dec){
+     sleep(20);
+    system("date");
+     system("smem");
+     sleep(1);
+     system("smem");
+    }
+  }
+  printf("freeing decoded reads \n");
   hattrie_free(trie_decoded_reads);
+ if (MEM_CHECK){
+     if (trie_decoded_reads){ 
+       sleep(20);
+    system("date");
+       system("smem");
+       sleep(1);
+       system("smem");
+      }
+  }
+  printf("freeing trie fp and done decoding \n");
   hattrie_free(trie_fp);
-
+  if (MEM_CHECK){    
+    if (trie_fp){
+      sleep(20);
+    system("date");
+      system("smem");
+      sleep(1);
+      system("smem");
+    }
+  }
+  printf("done decoce \n");
+  return(1);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

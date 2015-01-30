@@ -32,7 +32,7 @@ CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 struct _BloomFilter {
 	BloomFilterHashFunc hash_func;
 	unsigned char *table;
-	unsigned int table_size;
+	long long table_size;
 	unsigned int num_functions;
 };
 
@@ -68,7 +68,7 @@ static const unsigned int salts[] = {
 	0xa27e2a58, 0x66866fc5, 0x12519ce7, 0x437a8456,
 };
 
-BloomFilter *bloom_filter_new(unsigned int table_size, 
+BloomFilter *bloom_filter_new(long long table_size, 
                               BloomFilterHashFunc hash_func,
                               unsigned int num_functions)
 {
@@ -151,7 +151,7 @@ int bloom_filter_query(BloomFilter *bloomfilter, BloomFilterValue value)
 {
 	unsigned int hash;
 	unsigned int subhash;
-	unsigned int index;
+	long long index;
 	unsigned int i;
 	unsigned char b;
 	int bit;
@@ -195,12 +195,12 @@ int bloom_filter_query(BloomFilter *bloomfilter, BloomFilterValue value)
 
 void bloom_filter_read(BloomFilter *bloomfilter, unsigned char *array)
 {
-	unsigned int array_size;
+	long long array_size;
 
 	/* The table is an array of bits, packed into bytes.  Round up
 	 * to the nearest byte. */
 
-	array_size = (bloomfilter->table_size + 7) / 8;
+	array_size =(long long) (bloomfilter->table_size + 7) / 8;
 
 	/* Copy into the buffer of the calling routine. */
 
@@ -209,12 +209,12 @@ void bloom_filter_read(BloomFilter *bloomfilter, unsigned char *array)
 
 void bloom_filter_load(BloomFilter *bloomfilter, unsigned char *array)
 {
-	unsigned int array_size;
+	long long array_size;
 
 	/* The table is an array of bits, packed into bytes.  Round up
 	 * to the nearest byte. */
 
-	array_size = (bloomfilter->table_size + 7) / 8;
+	array_size = (long long) (bloomfilter->table_size + 7) / 8;
 
 	/* Copy from the buffer of the calling routine. */
 
@@ -224,8 +224,8 @@ void bloom_filter_load(BloomFilter *bloomfilter, unsigned char *array)
 BloomFilter *bloom_filter_union(BloomFilter *filter1, BloomFilter *filter2)
 {
 	BloomFilter *result;
-	unsigned int i;
-	unsigned int array_size;
+	long long i;
+	long long array_size;
 
 	/* To perform this operation, both filters must be created with
 	 * the same values. */
@@ -264,8 +264,8 @@ BloomFilter *bloom_filter_intersection(BloomFilter *filter1,
                                        BloomFilter *filter2)
 {
 	BloomFilter *result;
-	unsigned int i;
-	unsigned int array_size;
+	long long i;
+	long long array_size;
 
 	/* To perform this operation, both filters must be created with
 	 * the same values. */

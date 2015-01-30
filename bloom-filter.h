@@ -86,7 +86,7 @@ typedef unsigned int (*BloomFilterHashFunc)(BloomFilterValue data);
  *                         filter.
  */
 
-BloomFilter *bloom_filter_new(unsigned int table_size, 
+BloomFilter *bloom_filter_new(long long table_size, 
                               BloomFilterHashFunc hash_func,
                               unsigned int num_functions);
 

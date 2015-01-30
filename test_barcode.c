@@ -1,4 +1,5 @@
 #include "barcode.h"
+
 //************************************************************************************
 //load_unique_reads_to_trie function
 //************************************************************************************
@@ -118,7 +119,7 @@ void load_fastq_to_trie_and_print(char* file_path, char* label){
   }
   free(buffer);
 
-  hattrie_iteration(trie_reads, "reprinted_trie", label);
+  hattrie_iteration(trie_reads, "reprinted_trie", label, 1);
   hattrie_free(trie_reads);
 }
 
@@ -142,10 +143,36 @@ void test_make_unique_and_repeat_files(char * read_file_path, char* label) {
     trie_repeat = hattrie_create();
     trie_unique = hattrie_create();
     make_repeat_and_unique_tries(read_file_path, trie_unique, trie_repeat, NULL);
-    hattrie_iteration(trie_unique, "unique", label);
-    hattrie_iteration(trie_repeat, "repeat", label);
+    hattrie_iteration(trie_unique, "unique", label, 0);
+    hattrie_iteration(trie_repeat, "repeat", label, 1);
+      printf("done making unique and repat tries, about to free unique\n");
+      if (MEM_CHECK){
+        sleep(20);
+       system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
+      }
+
     hattrie_free(trie_unique);
+      printf("after freeing unique before freeing repeat\n");
+      if (MEM_CHECK){
+        sleep(30);
+       system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
+      }
+
     hattrie_free(trie_repeat);
+      printf("after repeat\n");
+      if (MEM_CHECK){
+        sleep(30);
+       system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
+      }
 
 }
 
@@ -239,21 +266,21 @@ void test_hash_unique_and_make_fp_fn(char * reads_file_path, char* genome_file_p
     query_bf_with_genome(bf_unique, genome_f ,trie_genome_unique, read_size);
     fclose(genome_f);
     printf("printing genome mapped unique reads, true and FP \n");
-    hattrie_iteration(trie_genome_unique, "genome_unique_all", label);
+    hattrie_iteration(trie_genome_unique, "genome_unique_all", label,0);
     trie_fp = hattrie_create();
     trie_fn = hattrie_create();
     trie_genome_true = hattrie_create();     //reads that really maps to the genome
 
     printf("start checking for false positive \n");
     check_fp(trie_unique,trie_genome_unique, trie_fp, trie_genome_true);
-    hattrie_iteration(trie_fp, "fp_unique", label);
+    hattrie_iteration(trie_fp, "fp_unique", label,0);
 
     printf("printing genome mapped unique reads, ture true values only \n");
-    hattrie_iteration(trie_genome_true, "genome_unique_true", label);
+    hattrie_iteration(trie_genome_true, "genome_unique_true", label, 0);
 
     printf("start checking for false negative \n");
     check_fn(trie_unique,trie_genome_true, trie_fn);
-    hattrie_iteration(trie_fn, "fn_unique", label);
+    hattrie_iteration(trie_fn, "fn_unique", label,0);
     printf("printing bloom filter\n");
     print_bf(bf_unique, bf_table_size,num_of_hash_func, label, "unique_bf");
     
@@ -294,7 +321,7 @@ void test_encode(char * read_file_path, char* genome_file_path, char* label) {
 
     make_repeat_and_unique_tries(read_file_path, trie_unique, trie_repeat, results);
 //    hattrie_iteration(trie_unique, "unique", label);
-    hattrie_iteration(trie_repeat, "repeat", label);
+    hattrie_iteration(trie_repeat, "repeat", label, 1);
 
     hattrie_free(trie_repeat);
 ///////////////
@@ -360,8 +387,8 @@ void test_decode_partial(char* bf_path) {
   load_file_to_trie("../data/test.fasta", trie_orig);
   load_file_to_trie("test_1_repeat.txt", trie_repeat);
   load_file_to_trie("test_3_fn_unique.txt", trie_repeat);
-  hattrie_iteration(trie_orig, "orig_load", "test_bf");
-  hattrie_iteration(trie_repeat, "repeat_load", "test_bf");
+  hattrie_iteration(trie_orig, "orig_load", "test_bf",1);
+  hattrie_iteration(trie_repeat, "repeat_load", "test_bf",1);
 
   hattrie_free(trie_orig);
   hattrie_free(trie_repeat);
@@ -402,14 +429,39 @@ void test_encode_decode(char * read_file_path, char* genome_file_path, char* lab
 ///////////////
 //part 1
 //////////////    
+    printf("starting test decode_encode \n");
+    system("date");
+    system("smem");
     trie_repeat = hattrie_create();
     trie_unique = hattrie_create();
-
-    make_repeat_and_unique_tries(read_file_path, trie_unique, trie_repeat, results);
+    printf("make unique and repeat tries\n");
+    if (make_repeat_and_unique_tries(read_file_path, trie_unique, trie_repeat, results)){
+      printf("done making unique and repat tries\n");
+      if (MEM_CHECK){
+        sleep(20);
+       system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
+      }
+    }
     //hattrie_iteration(trie_unique, "unique", label);
-    hattrie_iteration(trie_repeat, "repeat", label);
-
+    hattrie_iteration(trie_repeat, "repeat", label, 1);
+    printf("before free repeat\n");
+    system("date");
+    system("smem");
     hattrie_free(trie_repeat);
+    if (MEM_CHECK){
+      if (trie_repeat){
+        printf("after freeing trie repeat\n");
+        sleep(20);
+    system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
+      }
+    }
+
 ///////////////
 //part 2
 //////////////
@@ -422,14 +474,27 @@ void test_encode_decode(char * read_file_path, char* genome_file_path, char* lab
     num_of_hash_func = (unsigned int) ceil(table_factor*0.69314);
     printf("read num is %lld table size is %lld table factor is %u number of hash func is %u \n",read_num, bf_table_size,table_factor, num_of_hash_func);
 
-
+    printf("creating bf\n");
     bf_unique = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
-    trie_fp = hattrie_create();
-    trie_fn = hattrie_create();
+    if (MEM_CHECK){
+      if(bf_unique){
+      printf("memory after creating bf\n");
+      sleep(20);
+    system("date");
+      system("smem");
+      sleep(1);
+      system("smem");
+      }
+    }
+ //   trie_fp = hattrie_create();
+    trie_fp=NULL;
+    trie_fn = NULL;
     printf("start encoding\n");
-    encode(trie_unique, genome_f, bf_unique, trie_fp, trie_fn ,read_size, label, bf_table_size,num_of_hash_func);
-    printf("done encoding\n");
-
+    if (encode(trie_unique, genome_f, bf_unique, trie_fp, trie_fn ,read_size, label, bf_table_size,num_of_hash_func)) {
+      printf("done encoding\n");
+    system("date");
+      system("smem");
+    }
 //zippin
     if (with_zip==1){
       printf("zipping files\n");
@@ -439,10 +504,54 @@ void test_encode_decode(char * read_file_path, char* genome_file_path, char* lab
 
 
     fclose(genome_f);
+    printf("memory before freeing bf\n");
+    system("date");
+    system("smem");
     bloom_filter_free(bf_unique);
-    hattrie_free(trie_unique);
-    hattrie_free(trie_fn);
-    hattrie_free(trie_fp);
+    if (MEM_CHECK){
+      if(bf_unique){
+      printf("memory after freeing bf_unique and before freein trie uniuqe\n");
+      sleep(20);
+    system("date");
+      system("smem");
+      sleep(1);
+      system("smem");
+    }
+    } 
+   hattrie_free(trie_unique); 
+   if (MEM_CHECK){
+     if (trie_unique){
+     printf("memory after freein trie_unique\n");
+     sleep(20);
+    system("date");
+     system("smem");
+     sleep(1);
+     system("smem");
+     }
+   }
+//   hattrie_free(trie_fn);
+//   if (MEM_CHECK){
+//     if (trie_fn){
+//       printf("memory before freeing trie fn and after freeing fn\n");
+ //      sleep(20);
+ //   system("date");
+  //     system("smem");
+   //    sleep(1);
+   //    system("smem");
+    //  }
+//   }
+ //  hattrie_free(trie_fp);
+ //  if (MEM_CHECK){
+ //    if (trie_fn){
+ //     printf("memory  after freeing trie fn and before decode stage\n");
+ //     sleep(20);
+ //   system("date");
+ //     system("smem");
+ //     sleep(1);
+ //     system("smem");
+ //    }
+ //  }
+    
 
 //////////
 ///decode
@@ -456,12 +565,20 @@ void test_encode_decode(char * read_file_path, char* genome_file_path, char* lab
 //unzippin
     if (with_zip==1){
       printf("unzipping files\n");
-      zip_encoded_files(label);
+      unzip_encoded_files(label);
       printf("done unzipping files\n");
     }
     printf("start decoding\n");
-    decode(bf_path, repeat_file_path, genome_file_path, fn_file_path, fp_file_path, read_size, label);
-    printf("done test_encode_decode \n");
+    if (decode(bf_path, repeat_file_path, genome_file_path, fn_file_path, fp_file_path, read_size, label)) {
+      if (MEM_CHECK){
+        printf("done test_encode_decode \n");
+        sleep(20);
+    system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
+      }
+    }
 }
 
 
@@ -473,10 +590,162 @@ load_fastq_to_trie_and_print(file_path, file_name);
 printf("done test_load_to_trie_and_print test \n");
 }
 
+//////////
+//just for debugremove once done
+//////////////////////
+void test_stuff(char* label){
+  hattrie_t* trie_fp;
+  hattrie_t* trie_cp;
+
+    long long count = 0;
+    long long total_count =0;
+    value_t* value;
+    value_t  v;
+    long long repeat_number;
+    long long len;
+    char* check_key; //current read from trie_to_check to see if in trie_true
+    char* m_key; // result of key when checking if trie_to_check is in trie_true
+    char* push_key;
+    char* to_check_true_key;
+    hattrie_iter_t* i;
+    char fp_file_path[1024]="";
+    char directory[1024]=".";
+    long long array_size = 0;
+    long long table_size=3011655520;
+    long long bf_table_size=3011655520;
+    int num_of_hash_func=7;
+    char* bf_array;
+    BloomFilter* bf_unique;
+    hattrie_t* trie_unique;
+  system("free");
+  printf("loading unique trie \n");
+     trie_unique=hattrie_create();
+  printf("this is the trie %d\n", trie_unique);
+     load_file_to_trie("/vol/scratch/yaronein/hg19.c10.fasta", trie_unique);
+  printf("done loading unique trie \n");
+//hattrie_iteration(trie_unique, "stuff", "stuff", 1);
+
+    if (MEM_CHECK){
+      sleep(20);
+    system("date");
+      system("smem");
+      system("free");
+      sleep(1);
+      system("smem");
+     }
+  printf("freeing unique trie \n");
+  hattrie_free(trie_unique);
+  printf("after freeing unique trie \n");
+    if (MEM_CHECK){
+      sleep(30);
+    system("date");
+      system("smem");
+      system("free");
+      sleep(2);
+      system("smem");
+     }
+  printf("this is the trie %d\n", trie_unique);
+  //printf("iterating\n");
+//  hattrie_iteration(trie_unique, "stuff", "stuff", 1);
+//  printf("done iterating\n");
+
+
+
+//         hash_trie_into_bf(trie_unique, bf);
+
+//bf_table_size=10000;
+//table_size=10000;
+//    array_size = (table_size + 7) / 8;
+//    bf_unique = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
+//
+//  printf("before mallocing bf array\n");
+//    system("date");
+//  system("smem");
+////  bf_array = (char *)malloc(sizeof(char)*array_size);
+//  printf("after mallocing bf array\n");
+//  system("smem");
+//  printf("doing print bf\n");
+//  print_bf(bf_unique, bf_table_size,num_of_hash_func, label, "unique_bf");
+//  printf("done doing print bf\n");
+//    system("date");
+//  system("smem");
+//
+//
+//  make_path(fp_file_path,directory, label, "fp_unique");
+//  trie_fp = hattrie_create();
+//  trie_cp = hattrie_create();
+// 
+//
+//  printf("start test\n");
+//  system("smem");
+//
+//  printf("loading fp file to trie \n");
+//  load_file_to_trie(fp_file_path, trie_fp);
+//  printf("done lading fp\n");
+//  system("date");  
+//  system("smem");
+//  printf("start iterating fp an copy to fp\n");
+//
+//  i= hattrie_iter_begin(trie_fp, false);
+//while (!hattrie_iter_finished(i)) {
+//        total_count++;
+//        check_key = hattrie_iter_key(i, &len);
+//        m_key = hattrie_tryget(trie_cp, check_key, len);
+//        if(m_key==NULL){ //if not in trie_true - means false positive, then insert to FP trie, and also remove it from 
+//          count++;
+//          push_key = hattrie_get(trie_cp, check_key, len);
+//          *push_key=1;
+//        }
+//        if(check_key==push_key){
+//           printf("check_key=push_key\n");
+//        }
+//        if(&check_key==&push_key){
+//           printf("ponit-check_key=pointpush_key\n");
+//         }
+//
+//
+//        hattrie_iter_next(i);
+//        hattrie_del(trie_fp, check_key,len);
+//    }
+//  printf("done iterating\n");
+//    system("date");
+//  system("smem");
+//    printf("we had %lld false_positives out of %lld reads \n", count, total_count);
+//    hattrie_iter_free(i);
+//    count=0;
+//  system("sleep(20)");
+//  system("smem");
+//  system("sleep(1)");
+//  system("smem");
+//
+//   printf("freein trie_cp\n");
+//     hattrie_free(trie_cp);
+//  system("sleep(20)");
+//   system("smem");
+//  system("sleep(1)");
+//  system("smem");
+//
+//  printf("freeing trie fp and done\n");
+//  hattrie_free(trie_fp);
+//  system("sleep(20)");
+//  system("smem");
+//  system("sleep(1)");
+//  system("smem");
+
+
+}
+
+
+
+
+
+
+
 //arg1 = number of test
 //arg2 = label
 //arg3 = reads file
 //arg4 = genome reference file
+//nohup /usr/bin/time -v ./test_barcode 1 test_1 ../data/test.fasta ../data/hg19_samp.fa
 int main(int argc, char *argv[]) {
   char file_path[1024]="";
   char file_path2[1024]="";
@@ -484,9 +753,18 @@ int main(int argc, char *argv[]) {
   long long num_of_reads=0;
   test_number = argv[1];
   if (strcmp(test_number, "1") ==0) {
+    system("date");
+    system("smem");
     printf("doing test 1 \n");
     test_make_unique_and_repeat_files(argv[3], argv[2]);
     printf("done test 1");
+      if (MEM_CHECK){
+        sleep(30);
+       system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
+      }
 
   }
 
@@ -634,16 +912,33 @@ int main(int argc, char *argv[]) {
 //arg2 = label
 //arg3 = reads file
 //arg4 = genome reference file
-
+/// ./test_barcode 12 teting_with_zip ../data/test.fasta  ../data/hg19_samp.fa
   if (strcmp(test_number, "12") ==0) {
     printf("doing test 12 of encoding file and decoding it and zipping \n");
     test_encode_decode(argv[3], argv[4], argv[2], 1);
     printf("done test 12");
   }
 
+/////
+//debug test
+//arg1 = number of test
+//arg2 = label
+////////////////////////
+  if (strcmp(test_number, "13") ==0) {
+    printf("doing test 13 of checking memory \n");
+    test_stuff( argv[2]);
+    printf("done test 13");
+    if (MEM_CHECK){
+      sleep(30);
+    system("date");
+      system("smem");
+      sleep(2);
+      system("smem");
+     }
+
+  }
 
 
 
   return 0;
 }
-
