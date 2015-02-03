@@ -9,7 +9,10 @@
     #define _LARGEFILE64_SOURCE 1
   #endif
 #endif
-#define MEM_CHECK 1
+#define MEM_CHECK 0
+#define TABLE_FACTOR 10
+#define HASH_FUNC_FACTOR 0.69314
+#define MAX_CASCADES 100
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -38,8 +41,8 @@ int query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* t
 void check_fp(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_push,  hattrie_t* trie_to_check_true);
 void check_fn(hattrie_t* trie_reads, hattrie_t* trie_true_reference, hattrie_t* trie_push);
 int print_bf(BloomFilter* bf, long long tables_size, int num_of_hash_func, char* label_1, char* label_2);
-int encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, hattrie_t* trie_fp, hattrie_t* trie_fn ,int read_size, char* label, long long bf_table_size,int num_of_hash_func);
+int encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, int read_size, char* label, long long bf_table_size,int num_of_hash_func, long long* number_of_fp_reads);
 int load_bf(char* bf_path, BloomFilter** bf, int* bf_results);
 int load_file_to_trie(char* reads_file_path, hattrie_t* reads_trie);
-int decode(char* bf_path, char* repeat_file_path, char* genome_file_path, char* fn_file_path, char* fp_file_path, int read_size, char* label);
+int decode(char* repeat_file_path, char* genome_file_path, char* fn_file_path, char* fp_file_path, int read_size, char* label, int cascade_number);
 #endif

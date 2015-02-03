@@ -135,7 +135,7 @@ int zip_encoded_files(char* archive_prefix_name)
 
   memset(&file_name[0], 0, sizeof(file_name));
   strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_fp_unique.txt");
+  strcat(file_name, "_fp_1.txt");
 //  zip(file_name ,archive_prefix_name, file_name);
   memset(&buffer[0], 0, sizeof(buffer));
   snprintf(buffer, sizeof(buffer), "gzip -f %s", file_name);
@@ -144,7 +144,7 @@ int zip_encoded_files(char* archive_prefix_name)
 
   memset(&file_name[0], 0, sizeof(file_name));
   strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_unique_bf.txt");
+  strcat(file_name, "_bf_1.txt");
  // zip(file_name ,archive_prefix_name, file_name);
   memset(&buffer[0], 0, sizeof(buffer));
   snprintf(buffer, sizeof(buffer), "gzip -f %s", file_name);
@@ -183,7 +183,7 @@ int unzip_encoded_files(char* archive_prefix_name)
 
   memset(&file_name[0], 0, sizeof(file_name));
   strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_fp_unique.txt.gz");
+  strcat(file_name, "_fp_1.txt.gz");
 //  unzip(archive_prefix_name, file_name);
   memset(&buffer[0], 0, sizeof(buffer));
   snprintf(buffer, sizeof(buffer), "gunzip -f %s", file_name);
@@ -192,7 +192,7 @@ int unzip_encoded_files(char* archive_prefix_name)
 
   memset(&file_name[0], 0, sizeof(file_name));
   strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_unique_bf.txt.gz");
+  strcat(file_name, "_bf_1.txt.gz");
 //  unzip(archive_prefix_name, file_name);
   memset(&buffer[0], 0, sizeof(buffer));
   snprintf(buffer, sizeof(buffer), "gunzip -f %s", file_name);
@@ -547,18 +547,19 @@ void check_if_trie_in_bf(hattrie_t* T, BloomFilter* bf) {
 //trie true: holds inside the references reads to check agains(uniuqe reads)
 //read- is there read we want to check if it's FP or true accept. the read lenght is len
 //if FP we write it to fp_file, else we keep it in trie_true_accept.
-void check_accept_read(char* read, hattrie_t* trie_true,hattrie_t* trie_true_accept, FILE* fp_file, long long len) {
+int check_accept_read(char* read, hattrie_t* trie_true,hattrie_t* trie_true_accept, FILE* fp_file, long long len) {
    char* m_key; // result of key when checking if trie_to_check is in trie_true
    char* to_check_true_key;
    m_key = hattrie_tryget(trie_true, read, len);
    if(m_key==NULL){ //if not in trie_true - means false positive, then insert to FP trie, and also remove it from 
       fprintf(fp_file, "%s", read);
-
+      return(1);     
    }
    else { //means it is true
      if (trie_true_accept!= NULL){
        to_check_true_key = hattrie_get(trie_true_accept, read, len);
        *to_check_true_key = 1;
+       return(0);
      }
    }
 }
@@ -673,6 +674,144 @@ int query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* t
 
 
 
+//************************************************************************************
+//cascading_fp_encode function
+//************************************************************************************
+//this function gets ,refernce reads trie, FP reference trie, a number of where this reference FP is in the cascade, an empty BF,
+// and a file_path where to write the new FP against the reference FP
+// first it hashes the FP into the BF
+//then it goes through the the reference reads, and check if it has an accpet in the BF,
+// if it has an accept it will check in the reference FP if it's there, and if it's not it
+//will print it to the file (so we'lll have in the new FP in the cascade)
+
+int cascading_fp_encode(hattrie_t* ref_reads_trie, hattrie_t* ref_fp_trie, BloomFilter* bf_ref_fp, char* new_fp_file_path,long long* num_of_new_fp_reads, int iteration) {
+  FILE *fp_file;
+//  long long num_of_inserted_reads=0;
+  long long total_count=0;
+  long long count_in_bf=0;
+  int in_bf_comp=0;
+  long long len=0;
+  char* check_key;
+  char* m_key;
+  hattrie_iter_t* i = hattrie_iter_begin(ref_reads_trie, false);
+  printf("start cascading_fp_encode\n");
+  printf("hashing FP number %d to BF number %d\n", iteration, iteration-1);
+  hash_trie_into_bf(ref_fp_trie, bf_ref_fp); //first hash FP1 to BF2
+  printf("donehashing FP \n");
+  fp_file=fopen(new_fp_file_path, "w");
+  *num_of_new_fp_reads=0;
+  hattrie_iteration(ref_reads_trie,"check_post", "check_post",1);
+  while (!hattrie_iter_finished(i)) { //check for each read in the unique reads, if BF2 has accpet, put it in FP2 file
+    total_count++;
+//    printf("%d\n",total_count);
+    check_key = hattrie_iter_key(i, &len); 
+    in_bf_comp = bloom_filter_query(bf_ref_fp, check_key);
+    if (in_bf_comp!=0) { //if the read is accpet- meaning it FP while it's realy a true postive, then it's FP to the FP, we should print it to FP2
+        fprintf(fp_file, "%s", check_key);
+        *num_of_new_fp_reads=*num_of_new_fp_reads+1;
+      }
+        hattrie_iter_next(i);
+    }
+  
+  hattrie_iter_free(i);
+  fclose(fp_file);
+  printf("we checked for %lld reads in which, we had total number of %lld which written into new  FP file\n",total_count, *num_of_new_fp_reads);
+  printf("done printing FP number %d\n", iteration);
+  printf("done cascading_fp_encode\n");
+  return(1);
+}
+
+//************************************************************************************
+//cascade_fp_encode function
+//************************************************************************************
+cascade_fp(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads){
+//open uniqu
+ BloomFilter* bf;
+ long long bf_table_size;
+ int num_of_hash_func;
+ char bf_label[1024]="";
+ char fp_label[1024]="";
+ char new_fp_label[1024]="";
+ char new_fp_file_path[1024]="";
+ char fp_ref_file_path[1024]="";
+ int number_of_cascade=4;
+ int i;
+ char str[15];
+ long long num_of_new_fp_reads;
+ hattrie_t* fp_ref_trie;
+ hattrie_t* cur_fp_trie;
+
+
+ printf("start cascading_fp_encode with %lld initial FP reads\n", *number_of_fp_reads);
+ strcat(new_fp_file_path, "./");
+ strcat(new_fp_file_path, label);
+ strcat(new_fp_file_path, "_fp_2.txt");
+
+ strcat(fp_ref_file_path, "./");
+ strcat(fp_ref_file_path, label);
+ strcat(fp_ref_file_path, "_fp_1.txt");
+
+ strcat(bf_label, "bf_2");
+ hattrie_iteration(unique_reads,"check_pre", "check_pre",1);
+
+ printf("done strcat\n");
+ fp_ref_trie=hattrie_create();
+ load_file_to_trie(fp_ref_file_path ,fp_ref_trie); //TODO!! change it to load file to BF!!
+ printf("done loading file to trie %s\n", fp_ref_file_path);
+ bf_table_size = TABLE_FACTOR*(*number_of_fp_reads);
+ num_of_hash_func = (long long) ceil(TABLE_FACTOR*HASH_FUNC_FACTOR);
+ bf = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
+ printf("created empty BF2 with  %lld table size,  and %d number of hash func\n", bf_table_size,num_of_hash_func);
+
+//first iteration
+ cascading_fp_encode(unique_reads, fp_ref_trie, bf, new_fp_file_path, &num_of_new_fp_reads, 2);
+ printf("freeing unique reads\n");
+ hattrie_free(unique_reads);
+ print_bf(bf, bf_table_size,num_of_hash_func, label, bf_label);
+ printf("freeing bf2 \n");
+ bloom_filter_free(bf);
+////bf1 belong to reads, bf2 belongs to pf1 and the new fp will be fp_2
+  for(i=3; i<(number_of_cascade+1); i++){ //if numbef of cascade=4, it will make bf3 that encodes fp2, and make fp3(which is FP relative to fp2), and bf4 which encode fp3 and make fp4 (which is FP relative to fp3)
+     printf("creating fp %d\n",i);
+     cur_fp_trie=hattrie_create();
+     bf_table_size = TABLE_FACTOR*num_of_new_fp_reads; //setting new bf based on previos number of fp reads
+     num_of_hash_func = (long long) ceil(TABLE_FACTOR*HASH_FUNC_FACTOR);
+     bf = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
+     printf("created empty BF number %d with  %lld table size and %d number of hash func\n",i, bf_table_size,num_of_hash_func);
+     load_file_to_trie(new_fp_file_path, cur_fp_trie);  //load previous "new fp" to be the current fp trie (what's going to be encoded)
+     memset(&new_fp_file_path[0], 0, sizeof(new_fp_file_path));
+     strcat(new_fp_file_path, "./");
+     strcat(new_fp_file_path, label);
+     strcat(new_fp_file_path, "_fp_");
+     sprintf(str, "%d", i);
+     strcat(new_fp_file_path, str);
+     strcat(new_fp_file_path, ".txt");  
+     num_of_new_fp_reads=0; //reset number of new fp reads
+     cascading_fp_encode(fp_ref_trie, cur_fp_trie, bf, new_fp_file_path, &num_of_new_fp_reads, i); //use the previois fp ref_file as the current refference.i (e.g fp_ref_trie=fp1,cur_fp_trie=fp_2,bf=bf2==> fp_new=fp3=fp1 not it bf_2
+  //after that, fp_ref_trie should be free and set to cur_fp_trie, and cur_fp_trie shold be new_fp_file_path
+     printf("freeing FP number %d \n", i-2);
+     free(fp_ref_trie);
+     fp_ref_trie=cur_fp_trie; //now fp_ref_trie (the reads which are going to be encoded to BF) are going to be the previous "new FP" which was created
+     memset(&bf_label[0], 0, sizeof(bf_label));
+     strcat(bf_label, "bf_");
+     strcat(bf_label, str);
+     printf("printing BF number %d \n", i);
+     print_bf(bf, bf_table_size,num_of_hash_func, label, bf_label);
+     printf("freeing BF number %d \n", i);
+     bloom_filter_free(bf);
+  }
+  free(cur_fp_trie);
+
+}
+
+
+
+int cascade_decode(){
+}
+
+
+
+
 
 //************************************************************************************
 //query_bf_with_genome_2 function
@@ -683,7 +822,7 @@ int query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* t
 //meaning trie_genome uniuqe holds all the unique reads that can map into the genome reference
 //as well as bloom filter's false positive sliding windows
 //************************************************************************************
-int query_bf_with_genome_2(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* trie_unique, int read_size, hattrie_t* trie_true_accept,char* m_label, char* output_label) {
+int query_bf_with_genome_2(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* trie_unique, int read_size, hattrie_t* trie_true_accept,char* m_label, char* output_label, long long* number_of_fp_reads) {
   int in_bf; //1 if cur_window in genome bloom-filter, 0 otherwisei
   int in_bf_comp; //1 if comp_window in genome bloom-filter, 0 otherwise
   int cur_window_index=0; //current index in the window
@@ -700,6 +839,7 @@ int query_bf_with_genome_2(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t*
   FILE *fp_file;
   char output_path[1024]="";
   printf("start querying unique BF through genome \n");
+  *number_of_fp_reads=0;
 
 //opening False positive file to write
   strcat(output_path, "./");
@@ -753,13 +893,12 @@ int query_bf_with_genome_2(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t*
       in_bf = bloom_filter_query(bf_unique, cur_window);
       if (in_bf!=0) {
         count_in_bf++;
-        check_accept_read(cur_window, trie_unique, trie_true_accept, fp_file, strlen(cur_window));
+        *number_of_fp_reads = *number_of_fp_reads+check_accept_read(cur_window, trie_unique, trie_true_accept, fp_file, strlen(cur_window));
       }
       in_bf_comp = bloom_filter_query(bf_unique, complementary_window);
       if (in_bf_comp!=0) {
         count_comp_in_bf++;
-        check_accept_read(complementary_window, trie_unique, trie_true_accept, fp_file, strlen(complementary_window));
-
+        *number_of_fp_reads = *number_of_fp_reads+check_accept_read(complementary_window, trie_unique, trie_true_accept, fp_file, strlen(complementary_window));
       }
 
 //      printf("regular window is %s , comp is %s",cur_window, complementary_window);
@@ -789,6 +928,8 @@ int query_bf_with_genome_2(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t*
   printf("done querying unique BF through genome \n");
   return(1);
 }
+
+
              
 //************************************************************************************
 //check_fp function
@@ -1042,9 +1183,8 @@ int print_bf(BloomFilter* bf, long long table_size, int num_of_hash_func, char* 
 //gets trie_unique with uniqe reads, genome referemce, and pointer to empty bloofilter,FN-trie,FP-trie, label for ouput, and parameters for bloom filter
 //and will load the bloom filter, the false negative trie and false positive trie
 // and also wll result in printing bloom-filter, false negatives, false positives into files
-//************************************************************************************
-
-int encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, hattrie_t* trie_fp, hattrie_t* trie_fn ,int read_size, char* label, long long bf_table_size,int num_of_hash_func) {
+//************************************************************************************int encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, int read_size, char* label, long long bf_table_size,int num_of_hash_func, long long* number_of_fp_reads;) {
+int encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, int read_size, char* label, long long bf_table_size,int num_of_hash_func, long long* number_of_fp_reads) {
     hattrie_t* trie_genome_unique; //put 'accepts' (everything that uniqe BF says yes that it's in genome) into a trie
     hattrie_t* trie_genome_true; //holds reads that really mapped into the genome reference
     printf("start encode function\n");
@@ -1057,7 +1197,7 @@ int encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, hattrie_t* tri
    // query_bf_with_genome(bf, genome,trie_genome_unique, read_size);
    trie_genome_unique = hattrie_create(); //will contain all the accepts windows with no FP
    trie_genome_true = hattrie_create();     //reads that really maps to the genome (true accepts)
-   if (query_bf_with_genome_2(bf, genome,trie_unique, read_size,trie_genome_true,"fp_unique", label)) {
+   if (query_bf_with_genome_2(bf, genome, trie_unique, read_size,trie_genome_true,"fp_1", label, number_of_fp_reads)) {
     if (MEM_CHECK){ 
      sleep(20);
     system("date");
@@ -1067,22 +1207,12 @@ int encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, hattrie_t* tri
     }
    }
    
-
-//    printf("start checking for false positive \n");
-//    check_fp_fn(trie_unique,trie_genome_unique, trie_genome_true,"fp_unique", label);
-     
-//    printf("done checking for false positve, printing it \n");
-//    system("smem");
-//    printf("freeing genome_unqiue \n");
-//    hattrie_free(trie_genome_unique);
-//    system("free");
     printf("start checking for false negative \n");
     if (check_fp_fn(trie_genome_true,trie_unique, NULL,"fn_unique", label)){
-  //  check_fn(trie_unique,trie_genome_true, trie_fn);
       printf("done checking for false negative\n");
       if (MEM_CHECK){
         sleep(20);
-    system("date");
+        system("date");
         system("smem");
         sleep(1);
         system("smem");   
@@ -1102,7 +1232,7 @@ int encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, hattrie_t* tri
     }
   //  hattrie_iteration(trie_fn, "fn_unique", label);
     printf("printing bloom filter\n");
-    print_bf(bf, bf_table_size,num_of_hash_func, label, "unique_bf");
+    print_bf(bf, bf_table_size,num_of_hash_func, label, "bf_1");
     printf("done printing bloom filter\n");
     printf("done encode function\n");
 }
@@ -1171,7 +1301,6 @@ int load_file_to_trie(char* reads_file_path, hattrie_t* reads_trie) {
   printf("memory before load\n");
   system("date");
   system("smem");
-  printf("this is the trie %d\n", reads_trie);
   f = fopen(reads_file_path, "r");
   if(f){
       do { // read all lines in file
@@ -1210,16 +1339,111 @@ int load_file_to_trie(char* reads_file_path, hattrie_t* reads_trie) {
   return(1);
 }
 
+//************************************************************************************
+//load_file_to_bf function
+//************************************************************************************
+//gets file_path and a trie pointer, and load the reads in the file into the trie
+//the value of the each read in the trie is the number of times a read appers
+//************************************************************************************
+int load_file_to_bf(char* reads_file_path, BloomFilter* bf) {
+  int size = 20; //size of read, default value=20 and increases in case of need
+  long long  pos; //index to buffer
+  int c; //reading character
+  long long line_number=1;
+  long long read_num =0;
+  char *buffer = (char *)malloc(size);
+  long long cur_line_num = 1;
+  FILE* f;
+  value_t* m_key;
+  int len;
+  char copy_buffer[200]="";
+  long long old_repeat_num; //holds value of number of repeats of a key before enetring another same key
+  printf("memory before load\n");
+  system("date");
+  system("smem");
+  f = fopen(reads_file_path, "r");
+  if(f){
+      do { // read all lines in file
+        pos = 0;
+        do{ // read one line
+          c = fgetc(f);
+          if(c != EOF) buffer[pos++] = toupper((char)c);
+          if(pos >= size) { // increase buffer length - leave room for 0
+            size +=1;
+            buffer = (char*)realloc(buffer, size);
+ //           strcpy(copy_buffer,buffer);
+          }
+        }while(c != EOF && c != '\n');
+        buffer[pos] = 0;
+        // line is now in buffer
+        read_num+=1;
+        // handle line
+        bloom_filter_insert(bf, buffer); //insert read into bloom filter
+      } while(c != EOF);
+      fclose(f);
+  }
+  else {
+    fprintf(stderr, "Error: couldnt open file %s \n",reads_file_path);
+  }
+  free(buffer);
+  printf("done load file to trie: loaded %lld reads \n", read_num);
+  return(1);
+}
+    
 
 
-/////////////////////////////////
+
+int cascade_bloom_filter_query(BloomFilter**bf,int number_of_cascades, hattrie_t* trie_fp, char* window){
+  int iteration;
+  int in_bf;
+  char* m_key;
+ 
+  in_bf = bloom_filter_query(bf[0], window); 
+  if (in_bf==1){ //if it's in the first bf (BF1), then if after it's ending in NOT being in an not even BF(3,5..) then it's FP,
+                 // if it's ending not being in an even BF it' true
+    for (iteration=1; iteration<number_of_cascades; iteration++){
+      in_bf = bloom_filter_query(bf[iteration], window);
+      if (in_bf==0){ 
+        if(((iteration+1)%2)==0){
+          return(1);
+         }
+        else{
+          return(0);
+        }
+       } //else continue until it's not in one of the bf, if it's in all bf check in fp
+    }
+    //if it got to this step it means all bf's where 1
+    m_key = hattrie_tryget(trie_fp, window, strlen(window));
+    if((number_of_cascades%2)==0){ //if it's even and exist in FP, then it's true return 1
+      if (m_key!=NULL) {
+        return(1);
+      }
+      else{
+        return(0);
+      }
+    }
+    else{ //if it non-even number of cascades
+      if (m_key!=NULL) { //not-even and exit in fp return 0
+        return(0);
+      }
+      else{
+        return(1);
+      }
+    }
+  }
+  else{ //if it's not in first bf then return 0
+    return(0);
+  }
+}
+
+///e/////////////////////////////
 //decode_unique_reads_from_genome
 /////////////////////////////////
 //this function receives a path to the genome file reference, a pointer to fp trie,a pointer to an empty decoded_readds trie,
 // a pointer to a bloom filter, read size, and decode the unique reads and loads it into the decoded_reads trie, based on the FP and the BF.
 //if the BF accepts a read from the shifting window in the genome, and it doesn't exist in FP it will load it do decoded-reads
 /////////////////////////////////
-int decode_unique_reads_from_genome(char* genome_file_path, hattrie_t* trie_fp, hattrie_t* trie_decoded_reads, BloomFilter* bf, int read_size){
+int decode_unique_reads_from_genome(char* genome_file_path, hattrie_t* trie_fp, hattrie_t* trie_decoded_reads, BloomFilter** bf, int read_size, int number_of_cascades){
   FILE* genome_file;
   int in_bf; //1 if cur_window in genome bloom-filter, 0 otherwisei
   int in_bf_comp; //1 if comp_window in genome bloom-filter, 0 otherwise
@@ -1278,8 +1502,7 @@ int decode_unique_reads_from_genome(char* genome_file_path, hattrie_t* trie_fp, 
       cur_window[read_size+1] = '\0';
       complementary_window[read_size] = '\n';
       complementary_window[read_size+1] = '\0';
-
-      in_bf = bloom_filter_query(bf, cur_window);
+      in_bf = cascade_bloom_filter_query(bf,number_of_cascades, trie_fp,cur_window);
       if (in_bf!=0) { //if it says read in bloom filter check first that it's not already in (it's been before or it was in repeats)
         count_in_bf++;
         m_key = hattrie_tryget(trie_decoded_reads, cur_window, strlen(cur_window));
@@ -1292,7 +1515,7 @@ int decode_unique_reads_from_genome(char* genome_file_path, hattrie_t* trie_fp, 
          }
        }
       //check for reverse complementary stranad
-      in_bf_comp = bloom_filter_query(bf, complementary_window);
+      in_bf_comp = cascade_bloom_filter_query(bf,number_of_cascades, trie_fp, complementary_window);
       if (in_bf_comp!=0) { //if it says read in bloom filter check first that it's not already in (it's been before or it was in repeats)
         count_comp_in_bf++;
         m_key = hattrie_tryget(trie_decoded_reads, complementary_window, strlen(complementary_window));
@@ -1333,17 +1556,19 @@ int decode_unique_reads_from_genome(char* genome_file_path, hattrie_t* trie_fp, 
         
 //////////////////////////////////////////////////
 //decode
-//////////////////////////////////////////////////
-//this function does the full decoding, it gets paths to a bloom filter with the genome reference accepts, repeated reads trie , genome referece file, FN trie, FP trie as well as read size and output label, and prints out the decoded reads into a file
-int decode(char* bf_path, char* repeat_file_path, char* genome_file_path, char* fn_file_path, char* fp_file_path, int read_size, char* label){
-  BloomFilter* bf_dec;
+///////////decode////////////////////////////////////decode//this function does the full decoding, it gets paths to a bloom filter with the genome reference accepts, repeated reads trie , genome referece file, FN trie, FP trie as well as read size and output label, and prints out the decoded reads into a file
+int decode(char* repeat_file_path, char* genome_file_path, char* fn_file_path, char* fp_file_path, int read_size, char* label, int cascade_number){
+  BloomFilter* bf_dec[MAX_CASCADES];
   hattrie_t* trie_decoded_reads;
-  hattrie_t* trie_fp;
+  hattrie_t*  trie_fp;
   int bf_results[2];
   FILE* repeat_file;
   FILE* decoded_file;
   FILE* fn_file;
+  int iteration;
   char output_path[1024]="";
+  char bf_path[1024]="";
+  char str[15];
   printf("start decoding \n");
   printf("copying repeat file to decoded file\n"); 
 // first we will copy all the repeat reads to file, and after we will add unique reads to it
@@ -1363,14 +1588,25 @@ int decode(char* bf_path, char* repeat_file_path, char* genome_file_path, char* 
   fclose(fn_file);
   trie_decoded_reads = hattrie_create();
   trie_fp = hattrie_create();
-  if (load_bf(bf_path, &bf_dec, bf_results)) {
-    if (MEM_CHECK){
-      sleep(20);
-    system("date");
-      system("smem");
-      sleep(1);
-      system("smem");
+ //loading  bf as number of cascade
+  for(iteration=0; iteration<cascade_number; iteration++){
+     memset(&bf_path[0], 0, sizeof(bf_path));
+     strcat(bf_path, label);
+     strcat(bf_path, "_bf_");
+     sprintf(str, "%d", iteration+1);
+     strcat(bf_path, str);
+     strcat(bf_path, ".txt");
+    printf("loading bf %s \n", bf_path);
+    if (load_bf(bf_path, &bf_dec[iteration], bf_results)) { //load_bf_file to bf, (bf_Results irrelevant here)
+      if (MEM_CHECK){
+        sleep(20);
+      system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
+      }
     }
+   print_bf(bf_dec[iteration],bf_results[0], bf_results[1], "_loaded_bf_cascade_", str);
   }
   //load repeats and false negatives into decoded trie
 //  printf("loading repeat file to trie\n");
@@ -1387,7 +1623,7 @@ int decode(char* bf_path, char* repeat_file_path, char* genome_file_path, char* 
       system("smem");  
      }
    }
-  if (decode_unique_reads_from_genome(genome_file_path, trie_fp, trie_decoded_reads, bf_dec, read_size)){
+  if (decode_unique_reads_from_genome(genome_file_path, trie_fp, trie_decoded_reads, bf_dec, read_size, cascade_number)){
      if (MEM_CHECK){
       sleep(20);
     system("date");
@@ -1401,15 +1637,17 @@ int decode(char* bf_path, char* repeat_file_path, char* genome_file_path, char* 
   hattrie_iteration_2(trie_decoded_reads, decoded_file, 0);
   fclose(decoded_file);
 //  hattrie_iteration(trie_decoded_reads, "decoded_file", label);
-  printf("freeing bf_dec \n");
-  bloom_filter_free(bf_dec);
-  if (MEM_CHECK){
-    if (bf_dec){
-     sleep(20);
-    system("date");
-     system("smem");
-     sleep(1);
-     system("smem");
+  for(iteration=0; iteration<cascade_number; iteration++){
+    printf("freeing bf_dec number %d \n", iteration);
+    bloom_filter_free(bf_dec[iteration]);
+    if (MEM_CHECK){
+      if (bf_dec){
+       sleep(20);
+      system("date");
+       system("smem");
+       sleep(1);
+       system("smem");
+      }
     }
   }
   printf("freeing decoded reads \n");

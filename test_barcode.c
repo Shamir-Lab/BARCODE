@@ -252,7 +252,7 @@ void test_hash_unique_and_make_fp_fn(char * reads_file_path, char* genome_file_p
    
 
     genome_f = fopen(genome_file_path, "r");   
-    table_factor = 10; //arbitrary
+   table_factor = TABLE_FACTOR; //arbitrary
   //  num_of_reads = line_number/2;
     bf_table_size = table_factor*unique_read_num;
     num_of_hash_func = (long long) ceil(table_factor*0.69314);
@@ -273,7 +273,7 @@ void test_hash_unique_and_make_fp_fn(char * reads_file_path, char* genome_file_p
 
     printf("start checking for false positive \n");
     check_fp(trie_unique,trie_genome_unique, trie_fp, trie_genome_true);
-    hattrie_iteration(trie_fp, "fp_unique", label,0);
+    hattrie_iteration(trie_fp, "fp_1", label,0);
 
     printf("printing genome mapped unique reads, ture true values only \n");
     hattrie_iteration(trie_genome_true, "genome_unique_true", label, 0);
@@ -282,7 +282,7 @@ void test_hash_unique_and_make_fp_fn(char * reads_file_path, char* genome_file_p
     check_fn(trie_unique,trie_genome_true, trie_fn);
     hattrie_iteration(trie_fn, "fn_unique", label,0);
     printf("printing bloom filter\n");
-    print_bf(bf_unique, bf_table_size,num_of_hash_func, label, "unique_bf");
+    print_bf(bf_unique, bf_table_size,num_of_hash_func, label, "bf_1");
     
 
     bloom_filter_free(bf_unique);
@@ -341,7 +341,7 @@ void test_encode(char * read_file_path, char* genome_file_path, char* label) {
     trie_fp = hattrie_create();
     trie_fn = hattrie_create();
 
-    encode(trie_unique, genome_f, bf_unique, trie_fp, trie_fn ,read_size, label, bf_table_size,num_of_hash_func);
+    encode(trie_unique, genome_f, bf_unique ,read_size, label, bf_table_size,num_of_hash_func, NULL);
      
     fclose(genome_f);
     bloom_filter_free(bf_unique);
@@ -356,9 +356,9 @@ void test_decode(int read_size,char* genome_file_path, char* directory, char* la
   char fp_file_path[1024]="";
   make_path(repeat_file_path,directory, label, "repeat"); 
   make_path(fn_file_path,directory, label, "fn_unique");
-  make_path(fp_file_path,directory, label, "fp_unique");
-  make_path(bf_path,directory, label, "unique_bf");
-  decode(bf_path, repeat_file_path, genome_file_path, fn_file_path, fp_file_path, read_size, label);
+  make_path(fp_file_path,directory, label, "fp_1");
+  make_path(bf_path,directory, label, "bf_1");
+//  decode(bf_path, repeat_file_path, genome_file_path, fn_file_path, fp_file_path, read_size, label);
   printf("done test_decode \n");
 }
 
@@ -382,7 +382,7 @@ void test_decode_partial(char* bf_path) {
   load_bf(bf_path, &bf, bf_results);
   table_size = bf_results[0];
   num_of_hash = bf_results[1];
-  print_bf(bf, table_size,num_of_hash, "test_bf", "unique_bf");
+  print_bf(bf, table_size,num_of_hash, "test_bf", "bf_1");
   bloom_filter_free(bf);
   load_file_to_trie("../data/test.fasta", trie_orig);
   load_file_to_trie("test_1_repeat.txt", trie_repeat);
@@ -402,7 +402,7 @@ void test_decode_partial(char* bf_path) {
 //this function get a read file path, genome file path, and a label
 //encodes the file, which create a repeat_file, bloom-filter file , false negatives file, false positives file like in encoding test
 // and then decodes it which results in decoded file
-void test_encode_decode(char * read_file_path, char* genome_file_path, char* label, int with_zip) {
+void test_encode_decode(char * read_file_path, char* genome_file_path, char* label, int with_zip, int with_cascade) {
     int read_size=0; //the size of the reads
     int table_factor; //arbitrary
     long long num_of_reads;
@@ -410,20 +410,21 @@ void test_encode_decode(char * read_file_path, char* genome_file_path, char* lab
     unsigned int num_of_hash_func;
     int results[2];
     int size=0;
+    int number_of_cascades=4; //TODO change
     long long read_num=0;
+    long long number_of_fp_reads; // number of false positive redads
     FILE* genome_f;
     BloomFilter* bf_unique; //BF for the unique tries
   //  char* output_label=(char *)malloc(50); //label name for the output files
     hattrie_t* trie_unique; //hattrie that holds the unique reads
     hattrie_t* trie_repeat; //hattrie that holds the repetetive reads, and the one that has N inside of them.
-    hattrie_t* trie_fp; //triw that holds false negatives set
-    hattrie_t* trie_fn;//trie that holds false positives set
 
     char bf_path[1024]="";
     char repeat_file_path[1024]="";
     char fn_file_path[1024]="";
     char fp_file_path[1024]="";
     char directory[1024]=".";
+    char str[15];
 
 
 ///////////////
@@ -486,22 +487,12 @@ void test_encode_decode(char * read_file_path, char* genome_file_path, char* lab
       system("smem");
       }
     }
- //   trie_fp = hattrie_create();
-    trie_fp=NULL;
-    trie_fn = NULL;
     printf("start encoding\n");
-    if (encode(trie_unique, genome_f, bf_unique, trie_fp, trie_fn ,read_size, label, bf_table_size,num_of_hash_func)) {
+    if (encode(trie_unique, genome_f, bf_unique ,read_size, label, bf_table_size,num_of_hash_func, &number_of_fp_reads)) {
       printf("done encoding\n");
     system("date");
       system("smem");
     }
-//zippin
-    if (with_zip==1){
-      printf("zipping files\n");
-      zip_encoded_files(label);
-      printf("done zipping files\n");
-    }
-
 
     fclose(genome_f);
     printf("memory before freeing bf\n");
@@ -512,54 +503,52 @@ void test_encode_decode(char * read_file_path, char* genome_file_path, char* lab
       if(bf_unique){
       printf("memory after freeing bf_unique and before freein trie uniuqe\n");
       sleep(20);
-    system("date");
+      system("date");
       system("smem");
       sleep(1);
       system("smem");
+      }
     }
-    } 
+
+
+
+//start cascading
+   if (with_cascade==1) {
+    printf("start cascading with number of intial false positive reads are %lld\n", number_of_fp_reads);
+     cascade_fp(trie_unique, label, &number_of_fp_reads);
+   }
+  else { //if it's in cascade trie unique it being free in cascade_fp, else we will free it here
    hattrie_free(trie_unique); 
    if (MEM_CHECK){
      if (trie_unique){
-     printf("memory after freein trie_unique\n");
-     sleep(20);
-    system("date");
-     system("smem");
-     sleep(1);
-     system("smem");
+       printf("memory after freein trie_unique\n");
+       sleep(20);
+       system("date");
+       system("smem");
+       sleep(1);
+       system("smem");
      }
    }
-//   hattrie_free(trie_fn);
-//   if (MEM_CHECK){
-//     if (trie_fn){
-//       printf("memory before freeing trie fn and after freeing fn\n");
- //      sleep(20);
- //   system("date");
-  //     system("smem");
-   //    sleep(1);
-   //    system("smem");
-    //  }
-//   }
- //  hattrie_free(trie_fp);
- //  if (MEM_CHECK){
- //    if (trie_fn){
- //     printf("memory  after freeing trie fn and before decode stage\n");
- //     sleep(20);
- //   system("date");
- //     system("smem");
- //     sleep(1);
- //     system("smem");
- //    }
- //  }
-    
+  }
+   //zippin
+  if (with_zip==1){
+   printf("zipping files\n");
+   zip_encoded_files(label);
+   printf("done zipping files\n");
+  }
 
 //////////
 ///decode
 /////////
     make_path(repeat_file_path,directory, label, "repeat");
     make_path(fn_file_path,directory, label, "fn_unique");
-    make_path(fp_file_path,directory, label, "fp_unique");
-    make_path(bf_path,directory, label, "unique_bf");
+    strcat(fp_file_path, "./");
+    strcat(fp_file_path, label);
+    strcat(fp_file_path, "_fp_");
+    sprintf(str, "%d", number_of_cascades);
+    strcat(fp_file_path, str);
+    strcat(fp_file_path,".txt");
+    printf("fp path is %s\n", fp_file_path);
 
 
 //unzippin
@@ -569,9 +558,9 @@ void test_encode_decode(char * read_file_path, char* genome_file_path, char* lab
       printf("done unzipping files\n");
     }
     printf("start decoding\n");
-    if (decode(bf_path, repeat_file_path, genome_file_path, fn_file_path, fp_file_path, read_size, label)) {
+    if (decode(repeat_file_path, genome_file_path, fn_file_path, fp_file_path, read_size, label, number_of_cascades)) {
       if (MEM_CHECK){
-        printf("done test_encode_decode \n");
+        printf("done test_encode_decode\n");
         sleep(20);
     system("date");
         system("smem");
@@ -590,6 +579,18 @@ load_fastq_to_trie_and_print(file_path, file_name);
 printf("done test_load_to_trie_and_print test \n");
 }
 
+
+
+void test_cascade_encode(char* label){
+    hattrie_t* trie_unique;
+    long long number_of_fp_reads=52012448;
+    char* unique_path="hg19.c0.1.beast.newv_memory_4_decoded_file.txt";
+    printf("start cascading with number of intial false positive reads are %lld\n", number_of_fp_reads);
+    trie_unique=hattrie_create();
+    load_file_to_trie(unique_path ,trie_unique);
+    printf("done load file to tore \n");
+    cascade_fp(trie_unique, label, &number_of_fp_reads);
+}
 //////////
 //just for debugremove once done
 //////////////////////
@@ -620,7 +621,7 @@ void test_stuff(char* label){
   system("free");
   printf("loading unique trie \n");
      trie_unique=hattrie_create();
-  printf("this is the trie %d\n", trie_unique);
+//  printf("this is the trie %d\n", trie_unique);
      load_file_to_trie("/vol/scratch/yaronein/hg19.c10.fasta", trie_unique);
   printf("done loading unique trie \n");
 //hattrie_iteration(trie_unique, "stuff", "stuff", 1);
@@ -644,7 +645,7 @@ void test_stuff(char* label){
       sleep(2);
       system("smem");
      }
-  printf("this is the trie %d\n", trie_unique);
+ // printf("this is the trie %d\n", trie_unique);
   //printf("iterating\n");
 //  hattrie_iteration(trie_unique, "stuff", "stuff", 1);
 //  printf("done iterating\n");
@@ -827,7 +828,7 @@ int main(int argc, char *argv[]) {
 
   if (strcmp(test_number, "7") ==0) {
     printf("doing test 7 of encoding file and decoding it \n");
-    test_encode_decode(argv[3], argv[4], argv[2], 0);
+    test_encode_decode(argv[3], argv[4], argv[2], 0, 0);
     printf("done test 7");
   }
 
@@ -915,7 +916,7 @@ int main(int argc, char *argv[]) {
 /// ./test_barcode 12 teting_with_zip ../data/test.fasta  ../data/hg19_samp.fa
   if (strcmp(test_number, "12") ==0) {
     printf("doing test 12 of encoding file and decoding it and zipping \n");
-    test_encode_decode(argv[3], argv[4], argv[2], 1);
+    test_encode_decode(argv[3], argv[4], argv[2], 1, 0);
     printf("done test 12");
   }
 
@@ -938,6 +939,26 @@ int main(int argc, char *argv[]) {
 
   }
 
+
+//arg1 = number of test
+//arg2 = label
+//arg3 = reads file
+//arg4 = genome reference file
+/// ./test_barcode 14 testing_cascade_without_zip ../data/fasta_input/hg19.100000.fasta  ../data/hg19_samp.fa
+  if (strcmp(test_number, "14") ==0) {
+    printf("doing test 14 of cascade encoding file and decoding it without ziipng \n");
+    test_encode_decode(argv[3], argv[4], argv[2], 0, 1);
+    printf("done test 14 of encode decode with cascade and no zip");
+  }
+
+//arg1 = number of test
+//arg2 = label
+/// ./test_barcode 15 testing_cascade_encode_small ../data/test.fasta  ../data/hg19_samp.fa
+  if (strcmp(test_number, "15") ==0) {
+    printf("doing test 15 of cascade encoding file \n");
+    test_cascade_encode(argv[2]);
+    printf("done test 15 of cascade encode");
+  }
 
 
   return 0;
