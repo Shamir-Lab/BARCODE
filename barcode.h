@@ -44,5 +44,8 @@ int print_bf(BloomFilter* bf, long long tables_size, int num_of_hash_func, char*
 int encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, int read_size, char* label, long long bf_table_size,int num_of_hash_func, long long* number_of_fp_reads);
 int load_bf(char* bf_path, BloomFilter** bf, int* bf_results);
 int load_file_to_trie(char* reads_file_path, hattrie_t* reads_trie);
+void make_path(char* path, char* directory, char* label_1, char* label_2);
+void encode_file(char * read_file_path, char* genome_file_path, char* label, int with_zip, int with_cascade);
 int decode(char* repeat_file_path, char* genome_file_path, char* fn_file_path, char* fp_file_path, int read_size, char* label, int cascade_number);
+void decode_file(char* genome_file_path, char* label, int with_zip, int with_cascade);
 #endif

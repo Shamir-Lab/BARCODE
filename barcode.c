@@ -672,6 +672,155 @@ int query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* t
   return(1);
 }
 
+//************************************************************************************
+//cascading_fp_encode function
+//************************************************************************************
+//this function gets ,refernce reads trie, FP reference trie, a number of where this reference FP is in the cascade, an empty BF,
+// and a file_path where to write the new FP against the reference FP
+// first it hashes the FP into the BF
+//then it goes through the the reference reads, and check if it has an accpet in the BF,
+// if it has an accept it will check in the reference FP if it's there, and if it's not it
+//will print it to the file (so we'lll have in the new FP in the cascade)
+
+int cascading_fp_encode(hattrie_t* ref_reads_trie, hattrie_t* ref_fp_trie, char* ref_fp_path, BloomFilter* bf_ref_fp, hattrie_t* new_fp_trie, char* new_fp_file_path,long long* num_of_new_fp_reads, int iteration) {
+  FILE *fp_file;
+//  long long num_of_inserted_reads=0;
+  long long total_count=0;
+  long long count_in_bf=0;
+  int in_bf_comp=0;
+  long long len=0;
+  char* check_key;
+  char* m_key;
+  
+  hattrie_iter_t* i = hattrie_iter_begin(ref_reads_trie, false);
+  printf("start cascading_fp_encode\n");
+  printf("hashing FP number %d to BF number %d\n", iteration, iteration-1);
+  if (ref_fp_trie==NULL){  //in the first case where FP file is big, we will load it to BF startight from file
+    load_file_to_bf(ref_fp_path, bf_ref_fp);
+  }
+  else{ //if not in first iteration, we will load to trie since we gonna use it after anyways
+    hash_trie_into_bf(ref_fp_trie, bf_ref_fp); //first hash FP1 to BF2
+  }
+  printf("done hashing FP to BF \n");
+  if(new_fp_trie==NULL){
+    fp_file=fopen(new_fp_file_path, "w");
+  }
+  *num_of_new_fp_reads=0;
+  while (!hattrie_iter_finished(i)) { //check for each read in the unique reads, if BF2 has accpet, put it in FP2 file
+    total_count++;
+//    printf("%d\n",total_count);
+    check_key = hattrie_iter_key(i, &len);
+    in_bf_comp = bloom_filter_query(bf_ref_fp, check_key);
+    if (in_bf_comp!=0) { //if the read is accpet- meaning it FP while it's realy a true postive, then it's FP to the FP, we should print it to FP2
+      if(new_fp_trie==NULL){ //in this case we will write read straight to trie
+        fprintf(fp_file, "%s", check_key);
+        *num_of_new_fp_reads=*num_of_new_fp_reads+1;
+      }
+      else{ //we will load read to trie
+         m_key = hattrie_get(new_fp_trie, check_key, strlen(check_key));
+         *m_key=1;
+         *num_of_new_fp_reads=*num_of_new_fp_reads+1;
+      }
+    }
+        hattrie_iter_next(i);
+    }
+
+  hattrie_iter_free(i);
+  if(new_fp_trie==NULL){
+    fclose(fp_file);
+  }
+  printf("we checked for %lld reads in which, we had total number of %lld which written into new  FP file\n",total_count, *num_of_new_fp_reads);
+  printf("done printing FP number %d\n", iteration);
+  printf("done cascading_fp_encode\n");
+  return(1);
+}
+
+//************************************************************************************
+//cascade_fp function
+//************************************************************************************
+cascade_fp(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads){
+//open uniqu
+  BloomFilter* bf;
+  long long bf_table_size;
+  int num_of_hash_func;
+  char bf_label[1024]="";
+  char fp_label[1024]="";
+  char new_fp_label[1024]="";
+  char new_fp_file_path[1024]="";
+  char fp_ref_file_path[1024]="";
+  int number_of_cascade=4;
+  int i;
+  char str[15];
+  long long num_of_new_fp_reads;
+  hattrie_t* fp_ref_trie;
+  hattrie_t* cur_fp_trie;
+  hattrie_t* new_fp_trie;
+
+  printf("start cascading_fp_encode with %lld initial FP reads\n", *number_of_fp_reads);
+  strcat(new_fp_file_path, "./");
+  strcat(new_fp_file_path, label);
+  strcat(new_fp_file_path, "_fp_2.txt");
+
+  strcat(fp_ref_file_path, "./");
+  strcat(fp_ref_file_path, label);
+  strcat(fp_ref_file_path, "_fp_1.txt");
+
+  strcat(bf_label, "bf_2");
+  bf_table_size = TABLE_FACTOR*(*number_of_fp_reads);
+  num_of_hash_func = (long long) ceil(TABLE_FACTOR*HASH_FUNC_FACTOR);
+  bf = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
+  printf("created empty BF2 with  %lld table size,  and %d number of hash func\n", bf_table_size,num_of_hash_func);
+ //first iteration
+  new_fp_trie=hattrie_create();
+  cascading_fp_encode(unique_reads, NULL, fp_ref_file_path, bf, new_fp_trie, new_fp_file_path, &num_of_new_fp_reads, 2);
+
+  printf("freeing unique reads\n");
+  hattrie_free(unique_reads);
+  print_bf(bf, bf_table_size,num_of_hash_func, label, bf_label);
+  printf("freeing bf2 \n");
+  bloom_filter_free(bf);
+  fp_ref_trie=hattrie_create();
+  load_file_to_trie(fp_ref_file_path, fp_ref_trie); //for the big FP1 in the first cascade, we will load it to trie from FP since we didn't load it before to the hash from trie but directly from a file
+  //TODO remove FP file
+////bf1 belong to reads, bf2 belongs to pf1 and the new fp will be fp_2
+  for(i=3; i<(number_of_cascade+1); i++){ //if numbef of cascade=4, it will make bf3 that encodes fp2, and make fp3(which is FP relative to fp2), and bf4 which encode fp3 and make fp4 (which is FP relative to fp3)
+     printf("creating fp %d\n",i);
+     cur_fp_trie=new_fp_trie; //load previous "new fp" to be the current fp trie (what's going to be encoded
+     if(i==number_of_cascade){ //if it's last iteration the print FP straight to file
+       new_fp_trie=NULL;
+     }
+     else{ //otherwise load it to trie
+       new_fp_trie=hattrie_create(); //new trie to get the new FP
+     }
+     bf_table_size = TABLE_FACTOR*num_of_new_fp_reads; //setting new bf based on previos number of fp reads
+     num_of_hash_func = (long long) ceil(TABLE_FACTOR*HASH_FUNC_FACTOR);
+     bf = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
+     printf("created empty BF number %d with  %lld table size and %d number of hash func\n",i, bf_table_size,num_of_hash_func);
+     memset(&new_fp_file_path[0], 0, sizeof(new_fp_file_path));
+     strcat(new_fp_file_path, "./");
+     strcat(new_fp_file_path, label);
+     strcat(new_fp_file_path, "_fp_");
+     sprintf(str, "%d", i);
+     strcat(new_fp_file_path, str);
+     strcat(new_fp_file_path, ".txt");
+     num_of_new_fp_reads=0; //reset number of new fp reads
+     cascading_fp_encode(fp_ref_trie, cur_fp_trie, NULL, bf, new_fp_trie, new_fp_file_path, &num_of_new_fp_reads, i); //use the previois fp ref_file as the current refference.i (e.g fp_ref_trie=fp1,cur_fp_trie=fp_2,bf=bf2==> fp_new=fp3=fp1 not it bf_2
+  //after that, fp_ref_trie should be free and set to cur_fp_trie, and cur_fp_trie shold be new_fp_file_path
+     printf("freeing FP number %d \n", i-2);
+     free(fp_ref_trie);
+     fp_ref_trie=cur_fp_trie; //now fp_ref_trie (the reads which are going to be encoded to BF) are going to be the previous "new FP" which was created
+     memset(&bf_label[0], 0, sizeof(bf_label));
+     strcat(bf_label, "bf_");
+     strcat(bf_label, str);
+     printf("printing BF number %d \n", i);
+     print_bf(bf, bf_table_size,num_of_hash_func, label, bf_label);
+     printf("freeing BF number %d \n", i);
+     bloom_filter_free(bf);
+  }
+  free(cur_fp_trie);
+
+}
+
 
 
 //************************************************************************************
@@ -684,7 +833,7 @@ int query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* t
 // if it has an accept it will check in the reference FP if it's there, and if it's not it
 //will print it to the file (so we'lll have in the new FP in the cascade)
 
-int cascading_fp_encode(hattrie_t* ref_reads_trie, hattrie_t* ref_fp_trie, BloomFilter* bf_ref_fp, char* new_fp_file_path,long long* num_of_new_fp_reads, int iteration) {
+int cascading_fp_encode_low_mem(hattrie_t* ref_reads_trie, char* ref_fp_path, BloomFilter* bf_ref_fp, char* new_fp_file_path,long long* num_of_new_fp_reads, int iteration) {
   FILE *fp_file;
 //  long long num_of_inserted_reads=0;
   long long total_count=0;
@@ -696,7 +845,7 @@ int cascading_fp_encode(hattrie_t* ref_reads_trie, hattrie_t* ref_fp_trie, Bloom
   hattrie_iter_t* i = hattrie_iter_begin(ref_reads_trie, false);
   printf("start cascading_fp_encode\n");
   printf("hashing FP number %d to BF number %d\n", iteration, iteration-1);
-  hash_trie_into_bf(ref_fp_trie, bf_ref_fp); //first hash FP1 to BF2
+  load_file_to_bf(ref_fp_path, bf_ref_fp); //first hash FP1 to BF2
   printf("donehashing FP \n");
   fp_file=fopen(new_fp_file_path, "w");
   *num_of_new_fp_reads=0;
@@ -722,9 +871,9 @@ int cascading_fp_encode(hattrie_t* ref_reads_trie, hattrie_t* ref_fp_trie, Bloom
 }
 
 //************************************************************************************
-//cascade_fp_encode function
+//cascade_fp_encode_low_mem function
 //************************************************************************************
-cascade_fp(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads){
+cascade_fp_low_mem(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads){
 //open uniqu
  BloomFilter* bf;
  long long bf_table_size;
@@ -733,6 +882,7 @@ cascade_fp(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads){
  char fp_label[1024]="";
  char new_fp_label[1024]="";
  char new_fp_file_path[1024]="";
+ char prev_fp_file_path[1024]="";
  char fp_ref_file_path[1024]="";
  int number_of_cascade=4;
  int i;
@@ -752,33 +902,31 @@ cascade_fp(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads){
  strcat(fp_ref_file_path, "_fp_1.txt");
 
  strcat(bf_label, "bf_2");
- hattrie_iteration(unique_reads,"check_pre", "check_pre",1);
-
- printf("done strcat\n");
- fp_ref_trie=hattrie_create();
- load_file_to_trie(fp_ref_file_path ,fp_ref_trie); //TODO!! change it to load file to BF!!
- printf("done loading file to trie %s\n", fp_ref_file_path);
  bf_table_size = TABLE_FACTOR*(*number_of_fp_reads);
  num_of_hash_func = (long long) ceil(TABLE_FACTOR*HASH_FUNC_FACTOR);
  bf = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
  printf("created empty BF2 with  %lld table size,  and %d number of hash func\n", bf_table_size,num_of_hash_func);
 
 //first iteration
- cascading_fp_encode(unique_reads, fp_ref_trie, bf, new_fp_file_path, &num_of_new_fp_reads, 2);
+// cascading_fp_encode(unique_reads, fp_ref_trie, bf, new_fp_file_path, &num_of_new_fp_reads, 2);
+ cascading_fp_encode_low_mem(unique_reads, fp_ref_file_path, bf, new_fp_file_path, &num_of_new_fp_reads, 2);
  printf("freeing unique reads\n");
  hattrie_free(unique_reads);
+
  print_bf(bf, bf_table_size,num_of_hash_func, label, bf_label);
  printf("freeing bf2 \n");
  bloom_filter_free(bf);
+ strcpy(prev_fp_file_path, fp_ref_file_path);
 ////bf1 belong to reads, bf2 belongs to pf1 and the new fp will be fp_2
   for(i=3; i<(number_of_cascade+1); i++){ //if numbef of cascade=4, it will make bf3 that encodes fp2, and make fp3(which is FP relative to fp2), and bf4 which encode fp3 and make fp4 (which is FP relative to fp3)
-     printf("creating fp %d\n",i);
-     cur_fp_trie=hattrie_create();
+     fp_ref_trie=hattrie_create();
+     load_file_to_trie(prev_fp_file_path ,fp_ref_trie); //this is the reference (like previous unique)
      bf_table_size = TABLE_FACTOR*num_of_new_fp_reads; //setting new bf based on previos number of fp reads
      num_of_hash_func = (long long) ceil(TABLE_FACTOR*HASH_FUNC_FACTOR);
      bf = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
      printf("created empty BF number %d with  %lld table size and %d number of hash func\n",i, bf_table_size,num_of_hash_func);
-     load_file_to_trie(new_fp_file_path, cur_fp_trie);  //load previous "new fp" to be the current fp trie (what's going to be encoded)
+//     load_file_to_trie(new_fp_file_path, cur_fp_trie);  //load previous "new fp" to be the current fp trie (what's going to be encoded)
+     strcpy(prev_fp_file_path, new_fp_file_path);
      memset(&new_fp_file_path[0], 0, sizeof(new_fp_file_path));
      strcat(new_fp_file_path, "./");
      strcat(new_fp_file_path, label);
@@ -787,11 +935,10 @@ cascade_fp(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads){
      strcat(new_fp_file_path, str);
      strcat(new_fp_file_path, ".txt");  
      num_of_new_fp_reads=0; //reset number of new fp reads
-     cascading_fp_encode(fp_ref_trie, cur_fp_trie, bf, new_fp_file_path, &num_of_new_fp_reads, i); //use the previois fp ref_file as the current refference.i (e.g fp_ref_trie=fp1,cur_fp_trie=fp_2,bf=bf2==> fp_new=fp3=fp1 not it bf_2
+     cascading_fp_encode_low_mem(fp_ref_trie, prev_fp_file_path, bf, new_fp_file_path, &num_of_new_fp_reads, i); //use the previois fp ref_file as the current refference.i (e.g fp_ref_trie=fp1,cur_fp_trie=fp_2,bf=bf2==> fp_new=fp3=fp1 not it bf_2
   //after that, fp_ref_trie should be free and set to cur_fp_trie, and cur_fp_trie shold be new_fp_file_path
      printf("freeing FP number %d \n", i-2);
      free(fp_ref_trie);
-     fp_ref_trie=cur_fp_trie; //now fp_ref_trie (the reads which are going to be encoded to BF) are going to be the previous "new FP" which was created
      memset(&bf_label[0], 0, sizeof(bf_label));
      strcat(bf_label, "bf_");
      strcat(bf_label, str);
@@ -800,14 +947,10 @@ cascade_fp(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads){
      printf("freeing BF number %d \n", i);
      bloom_filter_free(bf);
   }
-  free(cur_fp_trie);
-
 }
 
 
 
-int cascade_decode(){
-}
 
 
 
@@ -1674,5 +1817,223 @@ int decode(char* repeat_file_path, char* genome_file_path, char* fn_file_path, c
   }
   printf("done decoce \n");
   return(1);
+}
+
+
+
+///////////////////////////
+//make_path function
+////////////////////////////
+void make_path(char* path, char* directory, char* label_1, char* label_2){
+    strcat(path, directory);
+    strcat(path, "/");
+    strcat(path, label_1);
+    strcat(path, "_");
+    strcat(path, label_2);
+    strcat(path, ".txt");
+    printf("final path is %s \n",path);
+}
+
+
+//////////////////////////////////////////
+///
+//////////////////////////////////////////
+void print_param_file(char*  label, int read_size, int number_of_cascades){
+  char file_path[1024]="";
+  FILE* f;
+  printf("making param file\n");
+  make_path(file_path, "./", label, "params");
+  f = fopen(file_path, "w");
+  fprintf(f, "%d\n",read_size);
+  fprintf(f, "%d\n",number_of_cascades);
+  fclose(f);
+}
+
+
+
+
+////////////////////////////////////////
+//function encode file
+///////////////////////////////////////
+void encode_file(char * read_file_path, char* genome_file_path, char* label, int with_zip, int with_cascade){
+    int read_size=0; //the size of the reads
+    int table_factor; //arbitrary
+    long long num_of_reads;
+    long long bf_table_size = table_factor*num_of_reads;
+    unsigned int num_of_hash_func;
+    int results[2];
+    int size=0;
+    int number_of_cascades=4; //TODO change
+    long long read_num=0;
+    long long number_of_fp_reads; // number of false positive redads
+    FILE* genome_f;
+    BloomFilter* bf_unique; //BF for the unique tries
+  //  char* output_label=(char *)malloc(50); //label name for the output files
+    hattrie_t* trie_unique; //hattrie that holds the unique reads
+    hattrie_t* trie_repeat; //hattrie that holds the repetetive reads, and the one that has N inside of them.
+
+    char str[15];
+
+
+///////////////
+//part 1
+//////////////    
+    printf("starting test decode_encode \n");
+    system("date");
+    system("smem");
+    trie_repeat = hattrie_create();
+    trie_unique = hattrie_create();
+    printf("make unique and repeat tries\n");
+    if (make_repeat_and_unique_tries(read_file_path, trie_unique, trie_repeat, results)){
+      printf("done making unique and repat tries\n");
+      if (MEM_CHECK){
+        sleep(20);
+       system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
+      }
+    }
+    //hattrie_iteration(trie_unique, "unique", label);
+    hattrie_iteration(trie_repeat, "repeat", label, 1);
+    printf("before free repeat\n");
+    system("date");
+    system("smem");
+    hattrie_free(trie_repeat);
+    if (MEM_CHECK){
+      if (trie_repeat){
+        printf("after freeing trie repeat\n");
+        sleep(20);
+    system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
+      }
+    }
+
+///////////////
+//part 2
+//////////////
+    read_num = results[0];
+    size = results[1];
+    read_size = size-2;
+    genome_f = fopen(genome_file_path, "r");
+    table_factor = TABLE_FACTOR; //arbitrary
+    bf_table_size = (long long)table_factor*read_num;
+    num_of_hash_func = (unsigned int) ceil(table_factor*HASH_FUNC_FACTOR);
+    printf("read num is %lld table size is %lld table factor is %u number of hash func is %u \n",read_num, bf_table_size,table_factor, num_of_hash_func);
+    printf("creating bf\n");
+    bf_unique = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
+    if (MEM_CHECK){
+      if(bf_unique){
+      printf("memory after creating bf\n");
+      sleep(20);
+    system("date");
+      system("smem");
+      sleep(1);
+      system("smem");
+      }
+    }
+    printf("start encoding\n");
+    if (encode(trie_unique, genome_f, bf_unique ,read_size, label, bf_table_size,num_of_hash_func, &number_of_fp_reads)) {
+      printf("done encoding\n");
+    system("date");
+      system("smem");
+    }
+
+    fclose(genome_f);
+    printf("memory before freeing bf\n");
+    system("date");
+    system("smem");
+    bloom_filter_free(bf_unique);
+    if (MEM_CHECK){
+      if(bf_unique){
+      printf("memory after freeing bf_unique and before freein trie uniuqe\n");
+      sleep(20);
+      system("date");
+      system("smem");
+      sleep(1);
+      system("smem");
+      }
+    }
+//start cascading
+   if (with_cascade==1) {
+    printf("start cascading with number of intial false positive reads are %lld\n", number_of_fp_reads);
+     cascade_fp(trie_unique, label, &number_of_fp_reads);
+   }
+  else { //if it's in cascade trie unique it being free in cascade_fp, else we will free it here
+   hattrie_free(trie_unique);
+   if (MEM_CHECK){
+     if (trie_unique){
+       printf("memory after freein trie_unique\n");
+       sleep(20);
+       system("date");
+       system("smem");
+       sleep(1);
+       system("smem");
+     }
+   }
+  }
+   //zippin
+  if (with_zip==1){
+   printf("zipping files\n");
+   zip_encoded_files(label);
+   printf("done zipping files\n");
+  }
+  print_param_file(label, read_size, number_of_cascades);
+}
+
+void decode_file(char* genome_file_path, char* label, int with_zip, int with_cascade) {
+    int read_size=0; //the size of the reads //TODO, make a read size funtion
+    int number_of_cascades=0; //TODO change
+    FILE* genome_f;
+    char bf_path[1024]="";
+    char repeat_file_path[1024]="";
+    char fn_file_path[1024]="";
+    char fp_file_path[1024]="";
+    char param_file_path[1024]="";
+    char directory[1024]=".";
+    FILE* pf_file;
+    char str[15];
+
+    make_path(repeat_file_path,directory, label, "repeat");
+    make_path(fn_file_path,directory, label, "fn_unique");
+    make_path(param_file_path, directory, label, "params");
+    //get read size and number of cascades
+    pf_file = fopen(param_file_path, "r");
+    fscanf(pf_file, "%d %d\n", &read_size, &number_of_cascades);
+    fclose(pf_file); 
+ 
+    strcat(fp_file_path, "./");
+    strcat(fp_file_path, label);
+    strcat(fp_file_path, "_fp_");
+    sprintf(str, "%d", number_of_cascades);
+    strcat(fp_file_path, str);
+    strcat(fp_file_path,".txt");
+    printf("fp path is %s\n", fp_file_path);
+
+
+//unzippin
+    if (with_zip==1){
+      printf("unzipping files\n");
+      unzip_encoded_files(label);
+      printf("done unzipping files\n");
+    }
+
+    pf_file = fopen(param_file_path, "r");
+    fscanf(pf_file, "%d %d\n", &read_size, &number_of_cascades);
+    fclose(pf_file);
+    printf("read size is %d, number of cascades is %d \n", read_size, number_of_cascades);
+    printf("start decoding\n");
+    if (decode(repeat_file_path, genome_file_path, fn_file_path, fp_file_path, read_size, label, number_of_cascades)) {
+      if (MEM_CHECK){
+        printf("done test_encode_decode\n");
+        sleep(20);
+    system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
+      }
+    }
 }
 
