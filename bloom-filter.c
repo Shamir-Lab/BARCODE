@@ -117,7 +117,7 @@ void bloom_filter_insert(BloomFilter *bloomfilter, BloomFilterValue value)
 {
 	unsigned int hash;
 	unsigned int subhash;
-	unsigned int index;
+	long long index; //yeinhorn
 	unsigned int i;
 	unsigned char b;
 
