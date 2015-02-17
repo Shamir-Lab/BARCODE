@@ -334,51 +334,17 @@ void test_encode(char * read_file_path, char* genome_file_path, char* label) {
     hattrie_free(trie_fn);
 }
 
-void test_decode(int read_size,char* genome_file_path, char* directory, char* label) {
-  char bf_path[1024]="";
-  char repeat_file_path[1024]="";
-  char fn_file_path[1024]="";
-  char fp_file_path[1024]="";
-  make_path(repeat_file_path,directory, label, "repeat"); 
-  make_path(fn_file_path,directory, label, "fn_unique");
-  make_path(fp_file_path,directory, label, "fp_1");
-  make_path(bf_path,directory, label, "bf_1");
-//  decode(bf_path, repeat_file_path, genome_file_path, fn_file_path, fp_file_path, read_size, label);
-  printf("done test_decode \n");
+
+
+
+////////////////////
+//testdecode
+///////////////////
+//this function get a read file path, genome file path, and a label
+// and then decodes it which results in decoded file
+void test_decode(char * read_file_path, char* genome_file_path, char* label, int with_zip, int with_cascade) {
+  decode_file(genome_file_path, label, with_zip, with_cascade);
 }
-
-///////////////////////////////////////////
-//test_decode_partial -for debug
-///////////////////////////////////////////
-///gets a bloom filter with the test data,
-//prints bllom filter
-//////////////////////////////
-void test_decode_partial(char* bf_path) {
-  BloomFilter* bf;
-  hattrie_t* trie_repeat;
-  hattrie_t* trie_orig;
-  long long table_size=0;
-  int num_of_hash=0;
-  int bf_results[2];
-
-
-  trie_repeat = hattrie_create();
-  trie_orig = hattrie_create();
-  load_bf(bf_path, &bf, bf_results);
-  table_size = bf_results[0];
-  num_of_hash = bf_results[1];
-  print_bf(bf, table_size,num_of_hash, "test_bf", "bf_1");
-  bloom_filter_free(bf);
-  load_file_to_trie("../data/test.fasta", trie_orig);
-  load_file_to_trie("test_1_repeat.txt", trie_repeat);
-  load_file_to_trie("test_3_fn_unique.txt", trie_repeat);
-  hattrie_iteration(trie_orig, "orig_load", "test_bf",1);
-  hattrie_iteration(trie_repeat, "repeat_load", "test_bf",1);
-
-  hattrie_free(trie_orig);
-  hattrie_free(trie_repeat);
-}
-
 
 
 ////////////////////
@@ -388,7 +354,6 @@ void test_decode_partial(char* bf_path) {
 //encodes the file, which create a repeat_file, bloom-filter file , false negatives file, false positives file like in encoding test
 // and then decodes it which results in decoded file
 void test_encode_decode(char * read_file_path, char* genome_file_path, char* label, int with_zip, int with_cascade) {
-  int read_size=100; //the size of the reads //TODO, make a read size funtion
   encode_file(read_file_path, genome_file_path, label, with_zip, with_cascade);
   decode_file(genome_file_path, label, with_zip, with_cascade);
 }
@@ -609,12 +574,6 @@ int main(int argc, char *argv[]) {
 
   }
 
-  if (strcmp(test_number, "4") ==0) {
-    printf("doing test 4 \n");
-    test_decode_partial(argv[2]);
-    printf("done test 4");
-
-  }
 /////////////
 //test 5- deencoing
 /////////////////
@@ -626,8 +585,11 @@ int main(int argc, char *argv[]) {
 // ./test_barcode 5 test_3 . ../data/hg19_samp.fa 100
   if (strcmp(test_number, "5") ==0) {
     printf("doing test 5 of decoding \n");
-    if (sscanf (argv[5], "%lld", &num_of_reads)!=1) { printf ("error - argument 5 not an integer"); }
-    test_decode(num_of_reads,argv[4], argv[3], argv[2]);
+    strcat(file_path, argv[2]);
+    strcat(file_path, "_stderr.txt");
+    stderr = fopen (file_path, "w");
+
+    test_decode(argv[3], argv[4], argv[2], 0, 1);
     printf("done test 5");
 
   }
@@ -650,6 +612,9 @@ int main(int argc, char *argv[]) {
 //arg4 = genome reference file
 
   if (strcmp(test_number, "7") ==0) {
+    strcat(file_path, argv[2]);
+    strcat(file_path, "_stderr.txt");
+    stderr = fopen (file_path, "w");
     printf("doing test 7 of encoding file and decoding it \n");
     test_encode_decode(argv[3], argv[4], argv[2], 0, 0);
     printf("done test 7");
@@ -711,25 +676,6 @@ int main(int argc, char *argv[]) {
 
   }
 
-/////////////
-//test 11-unizip archive + dencoding
-/////////////////
-//arg1 test number
-//arg2 = label (of archive )
-//arg3 = direory of files 
-//arg4 = referenc genome
-//arg5 = length of reads
-// ./test_barcode 11 test_10 . ../data/hg19_samp.fa 100
-  if (strcmp(test_number, "11") ==0) {
-    printf("doing test 5 of unzip+ decoding \n");
-    if (sscanf (argv[5], "%lld", &num_of_reads)!=1) { printf ("error - argument 5 not an integer"); }
-    printf("unzippin \n");
-    unzip_encoded_files(argv[2]);
-    printf("decoding \n");
-    test_decode(num_of_reads,argv[4], argv[3], argv[2]);
-    printf("done test 5");
-
-  }
 
 
 //arg1 = number of test
@@ -779,6 +725,9 @@ int main(int argc, char *argv[]) {
 /// ./test_barcode 15 testing_cascade_encode_small ../data/test.fasta  ../data/hg19_samp.fa
   if (strcmp(test_number, "15") ==0) {
     printf("doing test 15 of cascade encoding file \n");
+    strcat(file_path, argv[2]);
+    strcat(file_path, "_stderr.txt");
+    stderr = fopen (file_path, "w");
     test_cascade_encode(argv[2]);
     printf("done test 15 of cascade encode");
   }
