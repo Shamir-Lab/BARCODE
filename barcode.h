@@ -9,7 +9,7 @@
     #define _LARGEFILE64_SOURCE 1
   #endif
 #endif
-#define MEM_CHECK 1
+#define MEM_CHECK 0
 #define TABLE_FACTOR 10
 #define HASH_FUNC_FACTOR 0.69314
 #define MAX_CASCADES 100
@@ -31,7 +31,7 @@ typedef unsigned int uint;
 char* copy_file_to_mem(char* file_path);
 int zip(char* file_path, char* archive_prefix_name, char* file_name);
 int unzip(char* archive_prefix_name, char* file_name);
-int zip_encoded_files(char* archive_prefix_name);
+int zip_encoded_files(char* archive_prefix_name, int number_of_cascades);
 int unzip_encoded_files(char* archive_prefix_name);
 int hattrie_iteration(hattrie_t* T, char* m_label, char* output_label, int with_duplicates);
 int make_repeat_and_unique_tries(char* reads_file_path, hattrie_t* trie_unique, hattrie_t* trie_repeat, long long* results);

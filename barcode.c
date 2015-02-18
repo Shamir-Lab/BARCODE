@@ -16,138 +16,70 @@ char* copy_file_to_mem(char* file_path){
   return(memfile);
 }
 
-
-
-//************************************************************************************
-//zip function gets a file path, a file name, archive name ,
-// and adds the file into the archive with the name "file_name", if archive doesn't
-//exist it will create it
-//************************************************************************************
-int zip(char* file_path, char* archive_prefix_name, char* file_name)
-{
-  mz_bool status;
-  char archive_filename[1024]=""; //name of the file you want to name your data 
-  char* data; //your data t4hat you want to compress
-  const char *s_pComment = "This is a comment";
-  strcat(archive_filename,archive_prefix_name);
-  strcat(archive_filename, ".zip");
-  data=copy_file_to_mem(file_path);
-  printf("done memcopy\n");
-    // Add a new file to the archive. Note this is an IN-PLACE operation, so if it fails your archive is probably hosed (its central directory may not be complete) but it should be recoverable using zip -F or -FF. So use caution with this guy.
-    // A more robust way to add a file to an archive would be to read it into memory, perform the operation, then write a new archive out to a temp file and then delete/rename the files.
-    // Or, write a new archive to disk to a temp file, then delete/rename the files. For this test this API is fine.
-    status = mz_zip_add_mem_to_archive_file_in_place(archive_filename, file_name, data, strlen(data), s_pComment, (uint16)strlen(s_pComment), MZ_BEST_COMPRESSION);
-    if (!status)
-    {
-      printf("mz_zip_add_mem_to_archive_file_in_place failed!\n");
-      free(data);
-      return EXIT_FAILURE;
-    }
-  free(data);
-  remove(file_path); //deleting original file
-  printf("Success.\n");
-  return EXIT_SUCCESS;
-}
-
-//************************************************************************************
-//unzip function
-//************************************************************************************
-//will unzip a file from a zip archive
-//////////////////////////////
-int unzip(char* archive_prefix_name, char* file_name)
-{
-  long long uncomp_size;
-  int i;
-  mz_zip_archive zip_archive;
-  mz_bool status;
-  char archive_filename[1024]=""; //name of the file you want to name your data 
-  const char *s_pComment = "This is a comment";
-  void *p;
-  FILE *fp;
-  strcat(archive_filename,archive_prefix_name);
-  strcat(archive_filename, ".zip");
-  fp=fopen(file_name, "w");
-  // Now try to open the archive.
-  memset(&zip_archive, 0, sizeof(zip_archive));
-  status = mz_zip_reader_init_file(&zip_archive, archive_filename, 0);
-  if (!status)
-  {
-    printf("mz_zip_reader_init_file() failed!\n");
-    return EXIT_FAILURE;
-  }
-  printf("done1\n");
-//  for (i = 0; i < (int)mz_zip_reader_get_num_files(&zip_archive); i++)
-//  {
-    // Try to extract all the files to the heap.
-    p = mz_zip_reader_extract_file_to_heap(&zip_archive, file_name, &uncomp_size, 0);
-  printf("done2\n");
-//    mz_zip_extract_archive_file_to_heap(archive_filename, filename_name,
-//        long long *pSize, mz_uint zip_flags);
-    if (!p)
-    {
-      printf("mz_zip_reader_extract_file_to_heap() failed!\n");
-      mz_zip_reader_end(&zip_archive);
-      return EXIT_FAILURE;
-    }
-    printf("Successfully extracted file \"%s\", size %u\n", file_name, (uint)uncomp_size);
-    fprintf(fp,"%s", (const char *)p);
-
-    // We're done.
-    mz_free(p);
-    fclose(fp);
-
-//  }
-
-    // Close the archive, freeing any resources it was using
-  mz_zip_reader_end(&zip_archive);
-  printf("Success.\n");
-  return EXIT_SUCCESS;
-
-}
-
 //************************************************************************************
 //zip_encode_files function will encode repeat, fn,fp,bf files of an encoded file
 //************************************************************************************
-int zip_encoded_files(char* archive_prefix_name)
+int zip_encoded_files(char* archive_prefix_name, int number_of_cascades)
 {
-  char archive_filename[1024]=""; //name of the file you want to name your data 
+  char archive_name[1024]=""; //name of the file you want to name your data 
   char file_name[1024]=""; 
-  char buffer[1024]="";
+  char buffer[2048]="";
+  char zip_command[2048]="";
+  char rm_command[2048]="";
+  char files_list[2048]=""; 
+  char str[15]; 
+  int i;
   
   strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_repeat.txt");
- // zip(file_name ,archive_prefix_name, file_name);
-  snprintf(buffer, sizeof(buffer), "gzip -f %s", file_name);
-  system(buffer);
- // strcat(archive_filename,archive_prefix_name);
-//  strcat(archive_filename, ".zip");
-
-
+  strcat(file_name, "_repeat.txt ");
+  strcat(files_list, file_name);
 
   memset(&file_name[0], 0, sizeof(file_name));
   strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_fn_unique.txt");
-//  zip(file_name ,archive_prefix_name, file_name);
-  memset(&buffer[0], 0, sizeof(buffer));
-  snprintf(buffer, sizeof(buffer), "gzip -f %s", file_name);
-  system(buffer);
-
+  strcat(file_name, "_fn_unique.txt " );
+  strcat(files_list, file_name);
 
   memset(&file_name[0], 0, sizeof(file_name));
   strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_fp_1.txt");
-//  zip(file_name ,archive_prefix_name, file_name);
-  memset(&buffer[0], 0, sizeof(buffer));
-  snprintf(buffer, sizeof(buffer), "gzip -f %s", file_name);
-  system(buffer);
-
+  strcat(file_name, "_params.txt " );
+  strcat(files_list, file_name);
 
   memset(&file_name[0], 0, sizeof(file_name));
   strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_bf_1.txt");
- // zip(file_name ,archive_prefix_name, file_name);
+  strcat(file_name, "_fp_");
+  sprintf(str, "%d", number_of_cascades);
+  strcat(file_name, str);
+  strcat(file_name,".txt ");
+  strcat(files_list, file_name);
+
+
+
+
+  for(i=1; i<(number_of_cascades+1); i++){
+    sprintf(str, "%d", i);
+    memset(&file_name[0], 0, sizeof(file_name));
+    strcat(file_name, archive_prefix_name);
+    strcat(file_name, "_bf_");
+    strcat(file_name, str);
+    strcat(file_name,".txt ");
+    strcat(files_list, file_name);
+  }
+  strcat(archive_name, archive_prefix_name);
+  strcat(archive_name,".7z ");
+  strcat(zip_command,"7z a ");
+  strcat(zip_command, archive_name);
+  strcat(zip_command, files_list);
+  printf("executing zip command %s \n", zip_command);
+  fprintf(stderr, "executing zip command %s \n", zip_command);
+  snprintf(buffer, sizeof(buffer), "%s", zip_command);
+  system(buffer);
+  
   memset(&buffer[0], 0, sizeof(buffer));
-  snprintf(buffer, sizeof(buffer), "gzip -f %s", file_name);
+  strcat(rm_command,"rm ");
+  strcat(rm_command, files_list);
+  printf("executing rm command %s \n", rm_command);
+  fprintf(stderr, "executing zip command %s \n", rm_command);
+  snprintf(buffer, sizeof(buffer), "%s", rm_command);
   system(buffer);
 
 }
@@ -157,46 +89,20 @@ int zip_encoded_files(char* archive_prefix_name)
 //************************************************************************************
 int unzip_encoded_files(char* archive_prefix_name)
 {
-  char archive_filename[1024]=""; //name of the file you want to name your data 
+  char archive_name[1024]=""; //name of the file you want to name your data 
   char file_name[1024]="";
   char buffer[1024]="";
+  char unzip_command[1024]="";
 
-//  strcat(archive_filename,archive_prefix_name);
-//  strcat(archive_filename, ".zip");
-
-  strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_repeat.txt.gz");
-//  unzip(archive_prefix_name, file_name);
-  snprintf(buffer, sizeof(buffer), "gunzip -f %s", file_name);
+  strcat(archive_name, archive_prefix_name);
+  strcat(archive_name,".7z ");
+  strcat(unzip_command,"7z e ");
+  strcat(unzip_command, archive_name);
+  printf("executing unzip command %s \n", unzip_command);
+  fprintf(stderr, "executing zip command %s \n", unzip_command);
+  snprintf(buffer, sizeof(buffer), "%s", unzip_command);
   system(buffer);
 
-
-  memset(&file_name[0], 0, sizeof(file_name));
-  strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_fn_unique.txt.gz");
-//  unzip(archive_prefix_name, file_name);
-  memset(&buffer[0], 0, sizeof(buffer));
-  snprintf(buffer, sizeof(buffer), "gunzip -f %s", file_name);
-  system(buffer);
-
-
-
-  memset(&file_name[0], 0, sizeof(file_name));
-  strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_fp_1.txt.gz");
-//  unzip(archive_prefix_name, file_name);
-  memset(&buffer[0], 0, sizeof(buffer));
-  snprintf(buffer, sizeof(buffer), "gunzip -f %s", file_name);
-  system(buffer);
-
-
-  memset(&file_name[0], 0, sizeof(file_name));
-  strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_bf_1.txt.gz");
-//  unzip(archive_prefix_name, file_name);
-  memset(&buffer[0], 0, sizeof(buffer));
-  snprintf(buffer, sizeof(buffer), "gunzip -f %s", file_name);
-  system(buffer);
 
 }
 
@@ -748,9 +654,9 @@ int cascading_fp_encode(hattrie_t* ref_reads_trie, hattrie_t* ref_fp_trie, char*
   if(new_fp_trie==NULL){
     fclose(fp_file);
   }
-  else {
-    hattrie_iteration(new_fp_trie,"cascade_cehck", new_fp_file_path, 1);
-  }
+//  else { FOR DEBUG
+//    hattrie_iteration(new_fp_trie,"cascade_cehck", new_fp_file_path, 1);
+//  }
   printf("we checked for %lld reads in which, we had total number of %lld which written into new  FP file\n",total_count, *num_of_new_fp_reads);
   fprintf(stderr, "we checked for %lld reads in which, we had total number of %lld which written into new  FP file\n",total_count, *num_of_new_fp_reads);
   printf("done creating FP number %d\n", iteration);
@@ -811,7 +717,7 @@ cascade_fp(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads){
   bloom_filter_free(bf);
   fp_ref_trie=hattrie_create();
   load_file_to_trie(fp_ref_file_path, fp_ref_trie); //for the big FP1 in the first cascade, we will load it to trie from FP since we didn't load it before to the hash from trie but directly from a file
-  //TODO remove FP file
+  unlink(fp_ref_file_path); //removing FP1 file
 ////bf1 belong to reads, bf2 belongs to pf1 and the new fp will be fp_2
   for(i=3; i<(number_of_cascade+1); i++){ //if numbef of cascade=4, it will make bf3 that encodes fp2, and make fp3(which is FP relative to fp2), and bf4 which encode fp3 and make fp4 (which is FP relative to fp3)
      cur_fp_trie=new_fp_trie; //load previous "new fp" to be the current fp trie (what's going to be encoded
@@ -1884,7 +1790,7 @@ int decode(char* repeat_file_path, char* genome_file_path, char* fn_file_path, c
         system("smem");
       }
     }
-   print_bf(bf_dec[iteration],bf_results[0], bf_results[1], "_loaded_bf_cascade_", str);
+  //FOR DEBUG: print_bf(bf_dec[iteration],bf_results[0], bf_results[1], "_loaded_bf_cascade_", str);
   }
   //load repeats and false negatives into decoded trie
 //  printf("loading repeat file to trie\n");
@@ -2125,15 +2031,15 @@ void encode_file(char * read_file_path, char* genome_file_path, char* label, int
      }
    }
   }
+  print_param_file(label, read_size, number_of_cascades);
    //zippin
   if (with_zip==1){
    printf("zipping files\n");
    fprintf(stderr, "zipping files\n");
-   zip_encoded_files(label);
+   zip_encoded_files(label, number_of_cascades);
    printf("done zipping files\n");
    fprintf(stderr, "done zipping files\n");
   }
-  print_param_file(label, read_size, number_of_cascades);
 }
 
 void decode_file(char* genome_file_path, char* label, int with_zip, int with_cascade) {
@@ -2148,6 +2054,13 @@ void decode_file(char* genome_file_path, char* label, int with_zip, int with_cas
     char directory[1024]=".";
     FILE* pf_file;
     char str[15];
+
+//unzippin
+    if (with_zip==1){
+      printf("unzipping files\n");
+      unzip_encoded_files(label);
+      printf("done unzipping files\n");
+    }
 
     make_path(repeat_file_path,directory, label, "repeat");
     make_path(fn_file_path,directory, label, "fn_unique");
@@ -2166,13 +2079,6 @@ void decode_file(char* genome_file_path, char* label, int with_zip, int with_cas
     printf("fp path is %s\n", fp_file_path);
     fprintf(stderr, "fp path is %s\n", fp_file_path);
 
-
-//unzippin
-    if (with_zip==1){
-      printf("unzipping files\n");
-      unzip_encoded_files(label);
-      printf("done unzipping files\n");
-    }
 
     pf_file = fopen(param_file_path, "r");
     fscanf(pf_file, "%d %d\n", &read_size, &number_of_cascades);
