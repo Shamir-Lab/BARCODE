@@ -97,57 +97,57 @@ printf("done test_load_to_trie_and_print test \n");
 //////////
 //just for debugremove once done
 //////////////////////
-void test_stuff(char* label){
-  hattrie_t* trie_fp;
-  hattrie_t* trie_cp;
+void test_stuff(char * read_file_path, char* genome_file_path, char* label){
+    int read_size=0; //the size of the reads
+    int table_factor; //arbitrary
+    long long num_of_reads;
+    long long bf_table_size = table_factor*num_of_reads;
+    unsigned int num_of_hash_func;
+    long long results[2];
+    int size=0;
+    int number_of_cascades=4; //TODO change
+    long long read_num=0;
+    long long number_of_fp_reads; // number of false positive redads
+    FILE* genome_f;
+    BloomFilter* bf_unique; //BF for
+    hattrie_t* trie_unique; //hattrie that holds the unique reads
+    hattrie_t* trie_repeat; //hattrie that holds the repetetive reads, and the one that has N inside of them.
+ 
 
-    long long count = 0;
-    long long total_count =0;
-    value_t* value;
-    value_t  v;
-    long long repeat_number;
-    long long len;
-    char* check_key; //current read from trie_to_check to see if in trie_true
-    char* m_key; // result of key when checking if trie_to_check is in trie_true
-    char* push_key;
-    char* to_check_true_key;
-    hattrie_iter_t* i;
-    char fp_file_path[1024]="";
-    char directory[1024]=".";
-    long long array_size = 0;
-    long long table_size=3011655520;
-    long long bf_table_size=3011655520;
-    int num_of_hash_func=7;
-    char* bf_array;
-    BloomFilter* bf_unique;
-    hattrie_t* trie_unique;
-  system("free");
-  printf("loading unique trie \n");
-     trie_unique=hattrie_create();
-//  printf("this is the trie %d\n", trie_unique);
-     load_file_to_trie("/vol/scratch/yaronein/hg19.c10.fasta", trie_unique);
-  printf("done loading unique trie \n");
-//hattrie_iteration(trie_unique, "stuff", "stuff", 1);
 
-    if (MEM_CHECK){
-      sleep(20);
+    sleep(20);
     system("date");
-      system("smem");
-      system("free");
-      sleep(1);
-      system("smem");
-     }
-  printf("freeing unique trie \n");
-  hattrie_free(trie_unique);
-  printf("after freeing unique trie \n");
-    if (MEM_CHECK){
-      sleep(30);
-    system("date");
-      system("smem");
-      system("free");
-      sleep(2);
-      system("smem");
-     }
+    system("smem");
+    sleep(1);
+    system("smem");
+    trie_repeat = hattrie_create();
+    trie_unique = hattrie_create();
+    printf("make unique and repeat tries\n");
+
+    if (make_repeat_and_unique_tries(read_file_path, trie_unique, trie_repeat, results)){
+      printf("done making unique and repat tries\n");
+        sleep(20);
+       system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
+    }
+   printf("freein repaet trie\n");
+         hattrie_free(trie_repeat);
+
+        sleep(20);
+       system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
+   printf("freein unique trie\n");
+         hattrie_free(trie_unique);
+
+        sleep(20);
+       system("date");
+        system("smem");
+        sleep(1);
+        system("smem");
 
 }
 
@@ -168,6 +168,18 @@ int main(int argc, char *argv[]) {
   char* test_number=NULL;
   long long num_of_reads=0;
   test_number = argv[1];
+
+
+/////////////
+//Help
+////////////
+  if ((test_number==NULL) || (strcmp(test_number, "-h") ==0)){
+    printf("--help\n To compress file, it needs three arguments,arbitrary  name-prefix, the file to compress, and the reference genome. The command should look like:\n ./barcode encode CompressedFilePrefix FileToCompress ReferenceGenomeFile\n This should results with new compreesd file CompressedFilePrefix.7z\n To uncompress file it needs two arguments, the compressed file prefix (without .7z), and the reference genome file. The command should like:\n ./barcode decode CompressedFilePrefix ReferenceGenomeFile\n");
+  return(0);
+  }
+
+
+
 
 /////////////
 //test 1- encoding
@@ -258,7 +270,9 @@ int main(int argc, char *argv[]) {
 ////////////////////////
   if (strcmp(test_number, "13") ==0) {
     printf("doing test 13 of checking memory \n");
-    test_stuff( argv[2]);
+        printf("doing encode \n");
+    strcat(file_path, argv[2]);
+    test_stuff(argv[3], argv[4], argv[2]);
     printf("done test 13");
     if (MEM_CHECK){
       sleep(30);

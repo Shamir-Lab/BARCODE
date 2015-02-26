@@ -18,8 +18,10 @@ char* copy_file_to_mem(char* file_path){
 
 //************************************************************************************
 //zip_encode_files function will encode repeat, fn,fp,bf files of an encoded file
+//if encode_od_decode==0, it's on encode mode so it will zip files and the will remove them
+//if its ==1, it's decode mode, so it will only remove the extracted files
 //************************************************************************************
-int zip_encoded_files(char* archive_prefix_name, int number_of_cascades)
+int zip_or_remove_encoded_files(char* archive_prefix_name, int number_of_cascades, int encode_or_decode)
 {
   char archive_name[1024]=""; //name of the file you want to name your data 
   char file_name[1024]=""; 
@@ -69,10 +71,12 @@ int zip_encoded_files(char* archive_prefix_name, int number_of_cascades)
   strcat(zip_command,"7z a ");
   strcat(zip_command, archive_name);
   strcat(zip_command, files_list);
-  printf("executing zip command %s \n", zip_command);
-  fprintf(stderr, "executing zip command %s \n", zip_command);
-  snprintf(buffer, sizeof(buffer), "%s", zip_command);
-  system(buffer);
+  if(encode_or_decode==0){
+    printf("executing zip command %s \n", zip_command);
+    fprintf(stderr, "executing zip command %s \n", zip_command);
+    snprintf(buffer, sizeof(buffer), "%s", zip_command);
+    system(buffer);
+  }
   
   memset(&buffer[0], 0, sizeof(buffer));
   strcat(rm_command,"rm ");
@@ -480,117 +484,6 @@ int check_accept_read(char* read, hattrie_t* trie_true,hattrie_t* trie_true_acce
      }
    }
 }
-//************************************************************************************
-//query_bf_with_genome function
-//************************************************************************************
-//this function gets the bloom filter with the unique reads, the gnome reference file,
-//and the read size, and put all the sliding windows size of read_size in which the
-//bloom filter says that they are in the bloom filter, into trie_genome_unique
-//meaning trie_genome uniuqe holds all the unique reads that can map into the genome reference
-//as well as bloom filter's false positive sliding windows
-//************************************************************************************
-int query_bf_with_genome(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t* trie_genome_uniqe, int read_size) {
-  int in_bf; //1 if cur_window in genome bloom-filter, 0 otherwisei
-  int in_bf_comp; //1 if comp_window in genome bloom-filter, 0 otherwise
-  int cur_window_index=0; //current index in the window
-  long long line_number =1; // count number of line in file
-  char* cur_window; //assuming read size is no larger then 600 chars
-  char* complementary_window; //complementary strand to cur_window
-  char* prev_window;
-  char* prev_comp_window;
-  int c; //holds current character
-  long  long count_in_bf=0;
-  long long count_comp_in_bf=0;
-  long long count_windows=0;
-  value_t* m_key;
-  printf("start querying unique BF through genome \n");
-  fprintf(stderr, "start querying unique BF through genome \n");
-
-  cur_window =  (char *)malloc(read_size+2); //+1 to '\n' , and +1 to'\0'
-  complementary_window = (char *)malloc(read_size+2);
-  prev_window =  (char *)malloc(read_size);
-  prev_comp_window = (char *)malloc(read_size);
-  do {
-    c = fgetc(genome_file);
-    if (c =='>' ) {
-      do {
-        c = (char) fgetc(genome_file);
-      } while (c != '\n');
-      line_number++;
-      cur_window_index=0;
-      continue;
-    }
-    check_legal_char(c, line_number);
-    if (c=='N') {
-      cur_window_index=0;
-      continue;
-    }
-    if (c=='\n') {
-      line_number++;
-      continue;
-    }
-
-
-
-  //  if ((line_number+cur_window_index)%1000000==0) {
-  //    printf("cur line number is %d line_number\n", line_number);
- //   }
-    if (cur_window_index == read_size-1) { // case we start full window or moving to next charcter in sliding window
-      // assigning cur_window = prev_window + c
-      count_windows++;
-      strncpy(cur_window, prev_window, read_size-1); //will copy prev window (99 charcters) to beginning of cur_Window
-      strncpy(complementary_window+1, prev_comp_window, read_size-1); //will copy prev window (99 charcters) of cur_Window, leaving first character free
-      cur_window[read_size-1] = toupper(c);
-      if (toupper(c)=='C') complementary_window[0]='G';
-      if (toupper(c)=='G') complementary_window[0]='C';
-      if (toupper(c)=='T') complementary_window[0]='A';
-      if (toupper(c)=='A') complementary_window[0]='T';
-      cur_window[read_size] = '\n';
-      cur_window[read_size+1] = '\0';
-      complementary_window[read_size] = '\n';
-      complementary_window[read_size+1] = '\0';
-
-      in_bf = bloom_filter_query(bf_unique, cur_window);
-      if (in_bf!=0) {
-//        printf("in bf xxxx \n");
-        count_in_bf++;
-        m_key = hattrie_get(trie_genome_uniqe, cur_window, strlen(cur_window));
-        *m_key=1;
-      }
-      in_bf_comp = bloom_filter_query(bf_unique, complementary_window);
-      if (in_bf_comp!=0) {
-//      printf("in bf xxxx \n");
-        count_comp_in_bf++;
-        m_key = hattrie_get(trie_genome_uniqe, complementary_window, strlen(complementary_window));
-        *m_key=1;
-      }
-
-//      printf("regular window is %s , comp is %s",cur_window, complementary_window);
-      strncpy(prev_window, cur_window+1, read_size-1); //will copy from second character 'read_size-1' characters into prev_window ,e.g for 100 will copy  2-100
-      strncpy(prev_comp_window, complementary_window, read_size-1); //will copy the first 'read_size-1' (99) characters to prev window
-    }
-    else {
-      cur_window[cur_window_index]=toupper(c);
-      if (toupper(c)=='C') complementary_window[read_size-cur_window_index-1]='G';
-      if (toupper(c)=='G') complementary_window[read_size-cur_window_index-1]='C';
-      if (toupper(c)=='T') complementary_window[read_size-cur_window_index-1]='A';
-      if (toupper(c)=='A') complementary_window[read_size-cur_window_index-1]='T';
-
-      if (cur_window_index==(read_size-2)) { //if it's the last character before window is the size of a read
-        strncpy(prev_window, cur_window, read_size-1); //will copy from first character 'read_size -1' characters into prev_window,e.g for 100 will copy  1-99
-        strncpy(prev_comp_window, complementary_window+1, read_size-1);// will copy from
-      }
-      cur_window_index++;
-    }
-  } while(c != EOF);
-  free(cur_window);
-  free(prev_window);
-  free(complementary_window);
-  free(prev_comp_window);
-  printf("there where total of %lld windows, in which %lld of original strands and %lld of complementary strands gave true for being in the BF \n",count_windows, count_in_bf, count_comp_in_bf);
-  fprintf(stderr, "there where total of %lld windows, in which %lld of original strands and %lld of complementary strands gave true for being in the BF \n",count_windows, count_in_bf, count_comp_in_bf);
-  return(1);
-}
 
 //************************************************************************************
 //cascading_fp_encode function
@@ -654,6 +547,19 @@ int cascading_fp_encode(hattrie_t* ref_reads_trie, hattrie_t* ref_fp_trie, char*
   if(new_fp_trie==NULL){
     fclose(fp_file);
   }
+  else{
+    if (MEM_CHECK){
+     printf("done new making FP %d \n", iteration);
+     fprintf(stderr,"done makin new FP %d \n", iteration);
+     sleep(20);
+     system("date");
+     system("smem");
+     sleep(1);
+     system("smem");
+    }
+  }
+
+
 //  else { FOR DEBUG
 //    hattrie_iteration(new_fp_trie,"cascade_cehck", new_fp_file_path, 1);
 //  }
@@ -661,7 +567,7 @@ int cascading_fp_encode(hattrie_t* ref_reads_trie, hattrie_t* ref_fp_trie, char*
   fprintf(stderr, "we checked for %lld reads in which, we had total number of %lld which written into new  FP file\n",total_count, *num_of_new_fp_reads);
   printf("done creating FP number %d\n", iteration);
   fprintf(stderr, "done creating FP number %d\n", iteration);
-  printf("done cascading_fp_encode\n");
+  printf("done cascading_fp_encode iteation\n");
   return(1);
 }
 
@@ -707,17 +613,55 @@ cascade_fp(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads){
  //first iteration
   new_fp_trie=hattrie_create();
   cascading_fp_encode(unique_reads, NULL, fp_ref_file_path, bf, new_fp_trie, new_fp_file_path, &num_of_new_fp_reads, 2);
+  if (MEM_CHECK){
+     printf("before freeing unique reads \n");
+     sleep(30);
+    system("date");
+     system("smem");
+     sleep(1);
+     system("smem");
+  }
+
 
   printf("freeing unique reads\n");
   fprintf(stderr, "freeing unique reads\n");
   hattrie_free(unique_reads);
+  if (MEM_CHECK){
+     printf("after freeing unique reads \n");
+     sleep(30);
+    system("date");
+     system("smem");
+     sleep(1);
+     system("smem");
+  }
+
   print_bf(bf, bf_table_size,num_of_hash_func, label, bf_label);
   printf("freeing bf2 \n");
   fprintf(stderr, "freeing bf2 \n");
   bloom_filter_free(bf);
+  if (MEM_CHECK){
+     printf("after freeing bf2 \n");
+     sleep(30);
+    system("date");
+     system("smem");
+     sleep(1);
+     system("smem");
+  }
+
   fp_ref_trie=hattrie_create();
+  printf("loadin fp1 to trie from file\n");
+  fprintf(stderr, "loadin fp1 to trie from file\n");
   load_file_to_trie(fp_ref_file_path, fp_ref_trie); //for the big FP1 in the first cascade, we will load it to trie from FP since we didn't load it before to the hash from trie but directly from a file
   unlink(fp_ref_file_path); //removing FP1 file
+  if (MEM_CHECK){
+     printf("after loading fp1 \n");
+     sleep(30);
+    system("date");
+     system("smem");
+     sleep(1);
+     system("smem");
+  }
+
 ////bf1 belong to reads, bf2 belongs to pf1 and the new fp will be fp_2
   for(i=3; i<(number_of_cascade+1); i++){ //if numbef of cascade=4, it will make bf3 that encodes fp2, and make fp3(which is FP relative to fp2), and bf4 which encode fp3 and make fp4 (which is FP relative to fp3)
      cur_fp_trie=new_fp_trie; //load previous "new fp" to be the current fp trie (what's going to be encoded
@@ -993,6 +937,7 @@ int query_bf_with_genome_2(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t*
   char output_path[1024]="";
   printf("start querying unique BF through genome \n");
   fprintf(stderr, "start querying unique BF through genome \n");
+
   *number_of_fp_reads=0;
 
 //opening False positive file to write
@@ -1054,7 +999,6 @@ int query_bf_with_genome_2(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t*
         count_comp_in_bf++;
         *number_of_fp_reads = *number_of_fp_reads+check_accept_read(complementary_window, trie_unique, trie_true_accept, fp_file, strlen(complementary_window));
       }
-
 //      printf("regular window is %s , comp is %s",cur_window, complementary_window);
       strncpy(prev_window, cur_window+1, read_size-1); //will copy from second character 'read_size-1' characters into prev_window ,e.g for 100 will copy  2-100
       strncpy(prev_comp_window, complementary_window, read_size-1); //will copy the first 'read_size-1' (99) characters to prev window
@@ -2036,7 +1980,7 @@ void encode_file(char * read_file_path, char* genome_file_path, char* label, int
   if (with_zip==1){
    printf("zipping files\n");
    fprintf(stderr, "zipping files\n");
-   zip_encoded_files(label, number_of_cascades);
+   zip_or_remove_encoded_files(label, number_of_cascades, 0);
    printf("done zipping files\n");
    fprintf(stderr, "done zipping files\n");
   }
@@ -2102,5 +2046,9 @@ void decode_file(char* genome_file_path, char* label, int with_zip, int with_cas
         system("smem");
       }
     }
+   if (!MEM_CHECK){ //if in DEBUG mode, we will KEEP the files
+     zip_or_remove_encoded_files(label, number_of_cascades, 1);
+   }
+
 }
 
