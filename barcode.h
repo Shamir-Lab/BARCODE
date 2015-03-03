@@ -13,6 +13,7 @@
 #define TABLE_FACTOR 10
 #define HASH_FUNC_FACTOR 0.69314
 #define MAX_CASCADES 100
+#define PYTHON "/a/home/cc/students/csguests/yaroneinhorn/anaconda/bin/python2.7"
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -24,6 +25,8 @@
 
 #include "bloom-filter.h"
 #include "hash-string.h"
+
+
 typedef unsigned char uint8;
 typedef unsigned short uint16;
 typedef unsigned int uint;
