@@ -55,7 +55,245 @@
 //}
 
 
+int make_scalce_file(char* file_name, char* new_file_name, int read_len){
+  char command[2048]="";
+  char forth_line[2048]="";
+  char third_forth_lines[2048]="+\n";
+  char first_line[2048]="@1\n";
+  char one_char[15]="1";
+  long long line_num=1;
+  FILE* f_new;
+  char c;
+  FILE* f;
+  int i;
+  int pos;
+  char *buffer = (char *)malloc(read_len+2);
+  printf("opening %s and creating new fastq format file %s \n", file_name, new_file_name);
+  f = fopen(file_name, "r");
+  f_new = fopen(new_file_name, "w");
 
+  for(i=0; i<read_len; i++){
+    strcat(forth_line, one_char);
+  }
+  printf("done for");
+  strcat(forth_line,"\n");
+  strcat(third_forth_lines,forth_line);
+  if(f){
+      do { // read all lines in file
+        pos=0;
+       // fprintf(f_new,"%s",first_line);
+        do{
+          c = fgetc(f);
+           // fprintf(f_new,"%c",c);
+           buffer[pos++] = c;
+        }while(c != EOF && c != '\n');
+        if(c!=EOF){
+          buffer[pos]=0;
+          fprintf(f_new,"%s",first_line);
+          fprintf(f_new,"%s",buffer);
+          fprintf(f_new,"%s",third_forth_lines);
+       }
+      }while(c != EOF);
+   }
+  fclose(f);
+  fclose(f_new);
+  free(buffer);
+  printf("done\n");
+}
+
+
+
+int rm_scalce_files(char* prefix_name){
+  char file_name[1024]="";
+
+  strcat(file_name, prefix_name);
+  strcat(file_name, "_1.scalcen");
+  unlink(file_name);
+  memset(&file_name[0], 0, sizeof(file_name));
+  strcat(file_name, prefix_name);
+  strcat(file_name, ".txt");
+  unlink(file_name);
+
+  memset(&file_name[0], 0, sizeof(file_name));
+  strcat(file_name, prefix_name);
+  strcat(file_name, "_fastq.txt");
+  unlink(file_name);
+}
+///////////////////
+//scalce_compress
+//////////////////////
+//this function get the prefix of the files, and the reads length,
+//make fake fastq file and then compress this fake fastq with scalce
+int scalce_compress_files(char* prefix_name, int read_len, int number_of_cascades)
+{
+  char file_name[1024]="";
+  char new_file_name[1024]="";
+  char comp_file_name[1024]="";
+  char str[15];
+  char command[1024]="";
+  char buffer[2048]="";
+
+
+  strcat(file_name, prefix_name);
+  strcat(file_name, "_repeat.txt");
+  strcat(new_file_name, prefix_name);
+  strcat(new_file_name, "_repeat_fastq.txt");
+  printf("doing scale for %s \n", file_name);
+  make_scalce_file(file_name, new_file_name, read_len);
+  strcat(comp_file_name, prefix_name);
+  strcat(comp_file_name, "_repeat");
+  strcat(command, "scalce-bin ");
+  strcat(command, new_file_name);
+  strcat(command, " -A -T 1 -n library -o ");
+  strcat(command, comp_file_name);
+  printf("executing the next command %s \n", command);
+  snprintf(buffer, sizeof(buffer), "%s", command);
+  system(buffer);
+  rm_scalce_files(comp_file_name);
+
+  memset(&new_file_name[0], 0, sizeof(new_file_name));
+  memset(&file_name[0], 0, sizeof(file_name));
+  memset(&comp_file_name[0], 0, sizeof(comp_file_name));
+  memset(&buffer[0], 0, sizeof(buffer));
+  memset(&command[0], 0, sizeof(command));
+  strcat(file_name, prefix_name);
+  strcat(file_name, "_fn_unique.txt");
+  strcat(new_file_name, prefix_name);
+  strcat(new_file_name, "_fn_unique_fastq.txt");
+  make_scalce_file(file_name, new_file_name,read_len);
+  strcat(comp_file_name, prefix_name);
+  strcat(comp_file_name, "_fn_unique");
+  strcat(command, "scalce-bin ");
+  strcat(command, new_file_name);
+  strcat(command, " -A -T 1 -n library -o ");
+  strcat(command, comp_file_name);
+  printf("executing the next command %s \n", command);
+  snprintf(buffer, sizeof(buffer), "%s", command);
+  system(buffer);
+  rm_scalce_files(comp_file_name);
+
+
+
+  memset(&file_name[0], 0, sizeof(file_name));
+  memset(&new_file_name[0], 0, sizeof(new_file_name));
+  memset(&comp_file_name[0], 0, sizeof(comp_file_name));
+  memset(&buffer[0], 0, sizeof(buffer));
+  memset(&command[0], 0, sizeof(command));
+  strcat(file_name, prefix_name);
+  strcat(file_name, "_fp_");
+  sprintf(str, "%d", number_of_cascades);
+  strcat(file_name, str);
+  strcat(file_name,".txt");
+  strcat(new_file_name, prefix_name);
+  strcat(new_file_name, "_fp_");
+  strcat(new_file_name, str);
+  strcat(new_file_name,"_fastq.txt");
+  make_scalce_file(file_name, new_file_name, read_len);
+  strcat(comp_file_name, prefix_name);
+  strcat(comp_file_name, "_fp_");
+  strcat(comp_file_name, str);
+  strcat(command, "scalce-bin ");
+  strcat(command, new_file_name);
+  strcat(command, " -A -T 1 -n library -o ");
+  strcat(command, comp_file_name);
+  printf("executing the next command %s \n", command);
+  snprintf(buffer, sizeof(buffer), "%s", command);
+  system(buffer);
+  rm_scalce_files(comp_file_name);
+
+}
+
+int take_reads_from_fastq_file(char* decomp_file_name, char* new_file_name, int read_len){
+  char command[2048]="";
+  long long line_num=1;
+  FILE* f_new;
+  char c;
+  FILE* f;
+  int pos;
+  long long line_number=1;
+  char *buffer = (char *)malloc(read_len+2);
+  printf("opening fastq %s and creating new reads file %s \n", decomp_file_name, new_file_name);
+  f = fopen(decomp_file_name, "r");
+  f_new = fopen(new_file_name, "w");
+
+  if(f){
+      do { // read all lines in file
+        pos=0;
+       // fprintf(f_new,"%s",first_line);
+        do{
+          c = fgetc(f);
+           // fprintf(f_new,"%c",c);
+           buffer[pos++] = c;
+        }while(c != EOF && c != '\n');
+        if(((line_number+2)%4)==0){
+          buffer[pos]=0;
+          fprintf(f_new,"%s",buffer);
+       }
+       line_number+=1;
+      }while(c != EOF);
+   }
+  fclose(f);
+  fclose(f_new);
+  free(buffer);
+  printf("done\n");
+}
+
+
+
+int scalce_decompress_file(char* prefix_name, int read_len){
+  char file_name[1024]=""; //compressed ifle name
+  char decomp_file_name[1024]=""; //final name
+  char new_file_name[1024]=""; //final name
+  char str[15];
+  char command[1024]="";
+  char buffer[2048]="";
+  char scalen_file_name[1024]="";
+
+  strcat(file_name, prefix_name);
+  strcat(new_file_name, prefix_name);
+  strcat(new_file_name,".txt");
+  strcat(scalen_file_name,prefix_name);
+  strcat(scalen_file_name, "_1.scalcern");
+  strcat(file_name, "_1.scalcer");
+  strcat(command,"scalce-bin ");
+  strcat(command,file_name);
+  strcat(command, " -n library -d -o ");
+  strcat(command, prefix_name);
+  printf("executing the next command %s \n", command);
+  snprintf(buffer, sizeof(buffer), "%s", command);
+  system(buffer);
+
+  strcat(decomp_file_name, prefix_name);
+  strcat(decomp_file_name, "_1.fastq");
+  take_reads_from_fastq_file(decomp_file_name, new_file_name, read_len);
+  unlink(decomp_file_name);
+}
+
+int scalce_decompress_files(char* prefix_name, int read_len, int number_of_cascades){
+  char fn_file_name[1024]=""; //compressed ifle name
+  char fp_file_name[1024]=""; //compressed ifle name
+  char repeat_file_name[1024]=""; //compressed ifle name
+  char str[15];
+  strcat(fn_file_name, prefix_name);
+  strcat(fn_file_name, "_fn_unique");
+  strcat(repeat_file_name, prefix_name);
+  strcat(repeat_file_name, "_repeat");
+  strcat(fp_file_name, prefix_name);
+  strcat(fp_file_name, "_fp_");
+  sprintf(str, "%d", number_of_cascades);
+  strcat(fp_file_name, str);
+
+  scalce_decompress_file(fn_file_name, read_len);
+  scalce_decompress_file(repeat_file_name, read_len);
+  scalce_decompress_file(fp_file_name, read_len);
+}
+
+                                                   
+//////////////////
+//get_f_val
+///////////////////////////////////////
+//executuing python script to get f value which prints into  a file, and then opening the file and reading it
+///////////////////////////////////////
 double get_f_val(long long numreads, long long genome_len, int read_len)
 {
    char command[1024]="";
@@ -65,8 +303,10 @@ double get_f_val(long long numreads, long long genome_len, int read_len)
    char str[128]="";
    char buffer[2048]="";
    char f_path[1028]="./f_val.txt";
+   char cCurrentPath[2048];
    double f_value;
    FILE *f_file;
+   
    strcat(command, PYTHON);
    strcat(command, " calc_f.py ");
    sprintf(read_len_c, "%d", read_len);
@@ -152,27 +392,27 @@ int zip_or_remove_encoded_files(char* archive_prefix_name, int number_of_cascade
   char str[15]; 
   int i;
   
-  strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_repeat.txt ");
-  strcat(files_list, file_name);
-
-  memset(&file_name[0], 0, sizeof(file_name));
-  strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_fn_unique.txt " );
-  strcat(files_list, file_name);
-
-  memset(&file_name[0], 0, sizeof(file_name));
+//  strcat(file_name, archive_prefix_name);
+//  strcat(file_name, "_repeat.txt ");
+//  strcat(files_list, file_name);
+//
+//  memset(&file_name[0], 0, sizeof(file_name));
+//  strcat(file_name, archive_prefix_name);
+//  strcat(file_name, "_fn_unique.txt " );
+//  strcat(files_list, file_name);
+//
+//  memset(&file_name[0], 0, sizeof(file_name));
   strcat(file_name, archive_prefix_name);
   strcat(file_name, "_params.txt " );
   strcat(files_list, file_name);
-
-  memset(&file_name[0], 0, sizeof(file_name));
-  strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_fp_");
-  sprintf(str, "%d", number_of_cascades);
-  strcat(file_name, str);
-  strcat(file_name,".txt ");
-  strcat(files_list, file_name);
+//
+//  memset(&file_name[0], 0, sizeof(file_name));
+//  strcat(file_name, archive_prefix_name);
+//  strcat(file_name, "_fp_");
+//  sprintf(str, "%d", number_of_cascades);
+//  strcat(file_name, str);
+//  strcat(file_name,".txt ");
+//  strcat(files_list, file_name);
 
 
 
@@ -2006,6 +2246,8 @@ void encode_file(char * read_file_path, char* genome_file_path, char* label, int
    zip_or_remove_encoded_files(label, number_of_cascades, 0);
    printf("done zipping files\n");
    fprintf(stderr, "done zipping files\n");
+   printf("compressing fn fp and repeat files with scalce\n");
+   scalce_compress_files(label, read_size, number_of_cascades);
   }
 }
 
@@ -2035,7 +2277,14 @@ void decode_file(char* genome_file_path, char* label, int with_zip, int with_cas
     //get read size and number of cascades
     pf_file = fopen(param_file_path, "r");
     fscanf(pf_file, "%d %d\n", &read_size, &number_of_cascades);
-    fclose(pf_file); 
+    fclose(pf_file);
+
+    if (with_zip==1){
+      printf("uncompressing repeat, fn and fp files with scalce\n");
+      scalce_decompress_files(label, read_size, number_of_cascades);
+      printf("done uncompressing files files\n");
+    }
+ 
  
     strcat(fp_file_path, "./");
     strcat(fp_file_path, label);
