@@ -81,22 +81,22 @@ int scalce_compress_files(char* prefix_name, int read_len, int number_of_cascade
   char buffer[2048]="";
 
 
-  strcat(file_name, prefix_name);
-  strcat(file_name, "_repeat.txt");
-  strcat(new_file_name, prefix_name);
-  strcat(new_file_name, "_repeat_fastq.txt");
-  printf("doing scale for %s \n", file_name);
-  make_scalce_file(file_name, new_file_name, read_len);
-  strcat(comp_file_name, prefix_name);
-  strcat(comp_file_name, "_repeat");
-  strcat(command, "scalce-bin ");
-  strcat(command, new_file_name);
-  strcat(command, " -A -T 1 -n library -o ");
-  strcat(command, comp_file_name);
-  printf("executing the next command %s \n", command);
-  snprintf(buffer, sizeof(buffer), "%s", command);
-  system(buffer);
-  rm_scalce_files(comp_file_name);
+//  strcat(file_name, prefix_name);
+//  strcat(file_name, "_repeat.txt");
+//  strcat(new_file_name, prefix_name);
+//  strcat(new_file_name, "_repeat_fastq.txt");
+//  printf("doing scale for %s \n", file_name);
+//  make_scalce_file(file_name, new_file_name, read_len);
+//  strcat(comp_file_name, prefix_name);
+//  strcat(comp_file_name, "_repeat");
+//  strcat(command, "scalce-bin ");
+//  strcat(command, new_file_name);
+//  strcat(command, " -A -T 1 -n library -o ");
+//  strcat(command, comp_file_name);
+//  printf("executing the next command %s \n", command);
+//  snprintf(buffer, sizeof(buffer), "%s", command);
+//  system(buffer);
+//  rm_scalce_files(comp_file_name);
 
   memset(&new_file_name[0], 0, sizeof(new_file_name));
   memset(&file_name[0], 0, sizeof(file_name));
@@ -104,12 +104,12 @@ int scalce_compress_files(char* prefix_name, int read_len, int number_of_cascade
   memset(&buffer[0], 0, sizeof(buffer));
   memset(&command[0], 0, sizeof(command));
   strcat(file_name, prefix_name);
-  strcat(file_name, "_fn_unique.txt");
+  strcat(file_name, "_fn_repeat.txt");
   strcat(new_file_name, prefix_name);
-  strcat(new_file_name, "_fn_unique_fastq.txt");
+  strcat(new_file_name, "_fn_repeat_fastq.txt");
   make_scalce_file(file_name, new_file_name,read_len);
   strcat(comp_file_name, prefix_name);
-  strcat(comp_file_name, "_fn_unique");
+  strcat(comp_file_name, "_fn_repeat");
   strcat(command, "scalce-bin ");
   strcat(command, new_file_name);
   strcat(command, " -A -T 1 -n library -o ");
@@ -224,19 +224,19 @@ int scalce_decompress_file(char* prefix_name, int read_len){
 int scalce_decompress_files(char* prefix_name, int read_len, int number_of_cascades){
   char fn_file_name[1024]=""; //compressed ifle name
   char fp_file_name[1024]=""; //compressed ifle name
-  char repeat_file_name[1024]=""; //compressed ifle name
+//  char repeat_file_name[1024]=""; //compressed ifle name
   char str[15];
   strcat(fn_file_name, prefix_name);
-  strcat(fn_file_name, "_fn_unique");
-  strcat(repeat_file_name, prefix_name);
-  strcat(repeat_file_name, "_repeat");
+  strcat(fn_file_name, "_fn_repeat");
+//  strcat(repeat_file_name, prefix_name);
+//  strcat(repeat_file_name, "_repeat");
   strcat(fp_file_name, prefix_name);
   strcat(fp_file_name, "_fp_");
   sprintf(str, "%d", number_of_cascades);
   strcat(fp_file_name, str);
 
   scalce_decompress_file(fn_file_name, read_len);
-  scalce_decompress_file(repeat_file_name, read_len);
+//  scalce_decompress_file(repeat_file_name, read_len);
   scalce_decompress_file(fp_file_name, read_len);
 }
 
@@ -332,6 +332,21 @@ char* copy_file_to_mem(char* file_path){
   return(memfile);
 }
 
+
+void con_file_list(char* file_name, char* label, char* suffix,char* files_list){
+  memset(&file_name[0], 0, sizeof(file_name));
+  strcat(file_name, label);
+  strcat(file_name, suffix);
+  if (access(file_name, F_OK) != -1) { //make sure file exists
+    strcat(file_name, " ");
+    strcat(files_list, file_name);
+  }
+  else {
+    printf("the file %s doesnt exist, as no reads exists\n", file_name);
+  }
+}
+
+
 //************************************************************************************
 //zip_encode_files function will encode repeat, fn,fp,bf files of an encoded file
 //if encode_od_decode==0, it's on encode mode so it will zip files and the will remove them
@@ -341,6 +356,7 @@ int zip_or_remove_encoded_files(char* archive_prefix_name, int number_of_cascade
 {
   char archive_name[1024]=""; //name of the file you want to name your data 
   char file_name[1024]=""; 
+  char fp_file_prefix[1024]="";
   char buffer[2048]="";
   char zip_command[2048]="";
   char rm_command[2048]="";
@@ -349,29 +365,17 @@ int zip_or_remove_encoded_files(char* archive_prefix_name, int number_of_cascade
   int i;
   
 //  strcat(file_name, archive_prefix_name);
-//  strcat(file_name, "_repeat.txt ");
+//  strcat(file_name, "_params.txt " );
 //  strcat(files_list, file_name);
-//
-//  memset(&file_name[0], 0, sizeof(file_name));
-//  strcat(file_name, archive_prefix_name);
-//  strcat(file_name, "_fn_unique.txt " );
-//  strcat(files_list, file_name);
-//
-//  memset(&file_name[0], 0, sizeof(file_name));
-  strcat(file_name, archive_prefix_name);
-  strcat(file_name, "_params.txt " );
-  strcat(files_list, file_name);
-//
-//  memset(&file_name[0], 0, sizeof(file_name));
-//  strcat(file_name, archive_prefix_name);
-//  strcat(file_name, "_fp_");
-//  sprintf(str, "%d", number_of_cascades);
-//  strcat(file_name, str);
-//  strcat(file_name,".txt ");
-//  strcat(files_list, file_name);
-
-
-
+  con_file_list(file_name, archive_prefix_name, "_params.txt",files_list);
+  con_file_list(file_name, archive_prefix_name, "_fn_repeat_1.scalceq",files_list);
+  con_file_list(file_name, archive_prefix_name, "_fn_repeat_1.scalcer",files_list);
+  strcat(fp_file_prefix, archive_prefix_name);
+  strcat(fp_file_prefix, "_fp_");
+  sprintf(str, "%d", number_of_cascades);
+  strcat(fp_file_prefix, str);
+  con_file_list(file_name, fp_file_prefix, "_1.scalceq",files_list);
+  con_file_list(file_name, fp_file_prefix, "_1.scalcer",files_list);
 
   for(i=1; i<(number_of_cascades+1); i++){
     sprintf(str, "%d", i);
@@ -1288,7 +1292,7 @@ void check_fp(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_pu
 }
 
 
-int check_fp_fn(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_to_check_true, char* m_label, char* output_label) {
+int check_fn(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_to_check_true, char* m_label, char* output_label) {
     long long count = 0;
     long long total_count =0;
     value_t* value;
@@ -1302,8 +1306,8 @@ int check_fp_fn(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_
     hattrie_iter_t* i = hattrie_iter_begin(trie_to_check, false);
     FILE *fp;
     char output_path[1024]="";
-    printf("start check_fp_fn\n");
-    fprintf(stderr, "start check_fp_fn\n");
+    printf("start check_fn\n");
+    fprintf(stderr, "start check_fn\n");
     strcat(output_path, "./");
     if (output_label) {
       strcat(output_path, output_label);
@@ -1311,7 +1315,7 @@ int check_fp_fn(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_
     }
     strcat(output_path, m_label);
     strcat(output_path, ".txt");
-    fp=fopen(output_path, "w");
+    fp=fopen(output_path, "a");
 
 
 //    trie_real_unique = hattrie_create();  //TMP- REOMVE!!!!
@@ -1336,27 +1340,13 @@ int check_fp_fn(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_
 //    printf("we had %lld false_positives out of %lld reads \n", count, total_count);
     hattrie_iter_free(i);
     fclose(fp);
-    printf("done check_fp\n");
-    fprintf(stderr, "done check_fp\n");
+    printf("done check_fn\n");
+    fprintf(stderr, "done check_fn\n");
     return(1);
 //    hattrie_iteration(trie_real_unique, "true_unique_fn", "testing"); //TMP- REOMVE!!!!
 //    hattrie_free(trie_real_unique);//TMP- REOMVE!!!!
 }
 
-
-
-
-//************************************************************************************
-//check_fn function
-//************************************************************************************
-//put all keys that are in trie_true but not in trie_true_reference (false nrgative case)
-//into trie_push
-//trie_true_reference should contain all the TRUE(!!) windows in the reference genome which are actually mapped to the trie_reads
-//in our case put all the reads that are unique but are not mapped into the genome reference (due to mutations)
-//************************************************************************************
-void check_fn(hattrie_t* trie_reads, hattrie_t* trie_true_reference, hattrie_t* trie_push) {
-  check_fp(trie_true_reference, trie_reads, trie_push, NULL); 
-}
 
 char *byte_to_binary(int x)
 {
@@ -1527,7 +1517,7 @@ int encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, int read_size,
    
     printf("start checking for false negative \n");
     fprintf(stderr, "start checking for false negative \n");
-    if (check_fp_fn(trie_genome_true,trie_unique, NULL,"fn_unique", label)){
+    if (check_fn(trie_genome_true,trie_unique, NULL,"fn_repeat", label)){
       printf("done checking for false negative\n");
       if (MEM_CHECK){
         sleep(20);
@@ -1550,7 +1540,7 @@ int encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, int read_size,
         system("smem");
       }
     }
-  //  hattrie_iteration(trie_fn, "fn_unique", label);
+  //  hattrie_iteration(trie_fn, "fn_repeat", label);
     printf("printing bloom filter\n");
     fprintf(stderr, "printing bloom filter\n");
     print_bf(bf, bf_table_size,num_of_hash_func, label, "bf_1");
@@ -1891,7 +1881,7 @@ int decode_unique_reads_from_genome(char* genome_file_path, hattrie_t* trie_fp, 
 //////////////////////////////////////////////////
 //decode
 ///////////decode////////////////////////////////////decode//this function does the full decoding, it gets paths to a bloom filter with the genome reference accepts, repeated reads trie , genome referece file, FN trie, FP trie as well as read size and output label, and prints out the decoded reads into a file
-int decode(char* repeat_file_path, char* genome_file_path, char* fn_file_path, char* fp_file_path, int read_size, char* label, int cascade_number){
+int decode(char* genome_file_path, char* fn_file_path, char* fp_file_path, int read_size, char* label, int cascade_number){
   BloomFilter* bf_dec[MAX_CASCADES];
   hattrie_t* trie_decoded_reads;
   hattrie_t*  trie_fp;
@@ -1916,9 +1906,9 @@ int decode(char* repeat_file_path, char* genome_file_path, char* fn_file_path, c
   strcat(output_path, "decoded_file");
   strcat(output_path, ".txt");
   decoded_file=fopen(output_path, "w");
-  repeat_file = fopen(repeat_file_path,"r");
-  copy_file(repeat_file, decoded_file);
-  fclose(repeat_file);
+//  repeat_file = fopen(repeat_file_path,"r");
+//  copy_file(repeat_file, decoded_file);
+//  fclose(repeat_file);
   fn_file = fopen(fn_file_path,"r");
   copy_file(fn_file, decoded_file);
   fclose(fn_file);
@@ -2099,7 +2089,7 @@ void encode_file(char * read_file_path, char* genome_file_path, char* label, int
       }
     }
     //hattrie_iteration(trie_unique, "unique", label);
-    hattrie_iteration(trie_repeat, "repeat", label, 1);
+    hattrie_iteration(trie_repeat, "fn_repeat", label, 1);
     printf("before free repeat\n");
     fprintf(stderr, "before free repeat\n");
     system("date");
@@ -2197,13 +2187,14 @@ void encode_file(char * read_file_path, char* genome_file_path, char* label, int
   print_param_file(label, read_size, number_of_cascades);
    //zippin
   if (with_zip==1){
+   printf("compressing fn_repeat and fp files with scalce\n");
+   scalce_compress_files(label, read_size, number_of_cascades);
+   printf("done compressing fn_repeat and fp files with scalce\n");
    printf("zipping files\n");
    fprintf(stderr, "zipping files\n");
    zip_or_remove_encoded_files(label, number_of_cascades, 0);
    printf("done zipping files\n");
    fprintf(stderr, "done zipping files\n");
-   printf("compressing fn fp and repeat files with scalce\n");
-   scalce_compress_files(label, read_size, number_of_cascades);
   }
 }
 
@@ -2212,7 +2203,7 @@ void decode_file(char* genome_file_path, char* label, int with_zip, int with_cas
     int number_of_cascades=0; //TODO change
     FILE* genome_f;
     char bf_path[1024]="";
-    char repeat_file_path[1024]="";
+//    char repeat_file_path[1024]="";
     char fn_file_path[1024]="";
     char fp_file_path[1024]="";
     char param_file_path[1024]="";
@@ -2227,8 +2218,8 @@ void decode_file(char* genome_file_path, char* label, int with_zip, int with_cas
       printf("done unzipping files\n");
     }
 
-    make_path(repeat_file_path,directory, label, "repeat");
-    make_path(fn_file_path,directory, label, "fn_unique");
+//    make_path(repeat_file_path,directory, label, "repeat");
+    make_path(fn_file_path,directory, label, "fn_repeat");
     make_path(param_file_path, directory, label, "params");
     //get read size and number of cascades
     pf_file = fopen(param_file_path, "r");
@@ -2263,7 +2254,7 @@ void decode_file(char* genome_file_path, char* label, int with_zip, int with_cas
       number_of_cascades=1;
   }
 
-    if (decode(repeat_file_path, genome_file_path, fn_file_path, fp_file_path, read_size, label, number_of_cascades)) {
+    if (decode(genome_file_path, fn_file_path, fp_file_path, read_size, label, number_of_cascades)) {
       if (MEM_CHECK){
         printf("done decode\n");
         

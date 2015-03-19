@@ -28,19 +28,22 @@ def cost(r, err_rate, Gen_len=6e7, n=6e6, end_len=100, read_len=100):
 def get_f(numreads, genome_len, read_len):
         print(scipy.__version__)
 	print "genome_len is %d, numreads is %d, read_len is %d" % (genome_len, numreads, read_len)
-	vals = minimize(cost, x0=5, args=(0.0, genome_len, numreads, 0, read_len), method='L-BFGS-B')
-
-	r = vals.x
-	exp_cost = vals.fun
-	c = 0.6185
-	f = c**r
-	if f > 1:
+        if (numreads!=0):
+	    vals = minimize(cost, x0=5, args=(0.0, genome_len, numreads, 0, read_len), method='L-BFGS-B')
+            r = vals.x
+	    exp_cost = vals.fun
+	    c = 0.6185
+	    f = c**r
+	if (numreads==0 or f>1):
 		f = 0.1
 		print "default (f=0.1) used"
+                f_file = open('f_val.txt', 'w')
+                f_file.write(str(f))
+
 	else:
 		print "expected cost per unique read is %f, f is %.3f" % (exp_cost, f)
-        f_file = open('f_val.txt', 'w')
-        f_file.write(str(f[0]))
+                f_file = open('f_val.txt', 'w')
+                f_file.write(str(f[0]))
         f_file.close()	
 	return f
 
