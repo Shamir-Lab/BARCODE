@@ -1,59 +1,6 @@
 #include "barcode.h"
 
 #include <stdlib.h>
-//#include <Python.h>
-//
-//double get_f_val_tmp(numreads, genome_len, read_len)
-//{
-//   // Set PYTHONPATH TO working directory
-//   setenv("PYTHONPATH",".",1);
-//
-//   PyObject *pName, *pModule, *pDict, *pFunc, *pValue, *presult;
-//
-//
-//   // Initialize the Python Interpreter
-//   Py_Initialize();
-//
-//
-//   // Build the name object
-//   pName = PyString_FromString((char*)"calc_f"); //the name of the .py file
-//
-//   // Load the module object
-//   pModule = PyImport_Import(pName);
-//
-//
-//   // pDict is a borrowed reference 
-//   pDict = PyModule_GetDict(pModule);
-//
-//
-//   // pFunc is also a borrowed reference 
-//   pFunc = PyDict_GetItemString(pDict, (char*)"get_f");
-//
-//   if (PyCallable_Check(pFunc))
-//   {
-//       pValue=Py_BuildValue("(z)",(char*)"something");
-//       PyErr_Print();
-//       printf("Let's give this a shot!\n");
-//       presult=PyObject_CallObject(pFunc,pValue);
-//       PyErr_Print();
-//   } else 
-//   {
-//       PyErr_Print();
-//   }
-//   printf("Result is %d\n",PyInt_AsLong(presult));
-//   Py_DECREF(pValue);
-//
-//   // Clean up
-//   Py_DECREF(pModule);
-//   Py_DECREF(pName);
-//
-//   // Finish the Python Interpreter
-//   Py_Finalize();
-//
-//
-//    return(pValue);
-//}
-
 
 int make_scalce_file(char* file_name, char* new_file_name, int read_len){
   char command[2048]="";
@@ -253,20 +200,25 @@ int scalce_decompress_file(char* prefix_name, int read_len){
   strcat(new_file_name, prefix_name);
   strcat(new_file_name,".txt");
   strcat(scalen_file_name,prefix_name);
-  strcat(scalen_file_name, "_1.scalcern");
+  strcat(scalen_file_name, "_1.scalceq");
   strcat(file_name, "_1.scalcer");
   strcat(command,"scalce-bin ");
   strcat(command,file_name);
   strcat(command, " -n library -d -o ");
   strcat(command, prefix_name);
-  printf("executing the next command %s \n", command);
-  snprintf(buffer, sizeof(buffer), "%s", command);
-  system(buffer);
+  if( (access( scalen_file_name, F_OK ) != -1) && (access( file_name, F_OK ) != -1 )) { //make sure they weren't empty files
+    printf("executing the next command %s \n", command);
+    snprintf(buffer, sizeof(buffer), "%s", command);
+    system(buffer);
 
-  strcat(decomp_file_name, prefix_name);
-  strcat(decomp_file_name, "_1.fastq");
-  take_reads_from_fastq_file(decomp_file_name, new_file_name, read_len);
-  unlink(decomp_file_name);
+    strcat(decomp_file_name, prefix_name);
+    strcat(decomp_file_name, "_1.fastq");
+    take_reads_from_fastq_file(decomp_file_name, new_file_name, read_len);
+    unlink(decomp_file_name);
+  }
+  else{
+    printf("no %s , %s files exist, meaning there are no reads for them then dont need to uncomprss these files\n", scalen_file_name, file_name);
+  }
 }
 
 int scalce_decompress_files(char* prefix_name, int read_len, int number_of_cascades){
@@ -356,6 +308,10 @@ void get_bf_params(long long * bf_params, long long numreads, long long genome_l
      num_of_hush=num_of_hush+1;
     }
   }
+  //make sure not an empty table in order to avoid error:
+   if (bf_params[1]==0){
+     bf_params[1]=1;
+   }
 }
 
 
