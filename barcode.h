@@ -9,11 +9,13 @@
     #define _LARGEFILE64_SOURCE 1
   #endif
 #endif
+//if MEM_CHECK==1, in non-verbose mode it will give current memeory usage as well. otherwise set MEM_CHECK=0
 #define MEM_CHECK 0
 #define TABLE_FACTOR 10
 #define HASH_FUNC_FACTOR 0.69314
 #define MAX_CASCADES 100
 #define PYTHON "/a/home/cc/students/csguests/yaroneinhorn/anaconda/bin/python2.7"
+#define SCALCE "./scalce-bin"
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -26,10 +28,11 @@
 #include "bloom-filter.h"
 #include "hash-string.h"
 
-
+extern int VERBOSE_MODE;
 typedef unsigned char uint8;
 typedef unsigned short uint16;
 typedef unsigned int uint;
+
 
 void make_path(char* path, char* directory, char* label_1, char* label_2);
 void encode_file(char * read_file_path, char* genome_file_path, char* label, int with_zip, int with_cascade);

@@ -1,6 +1,6 @@
 #include "barcode.h"
 
-
+int VERBOSE_MODE; //gloabal variable instead of deifne to avoid linker issues
 
 //this function get a read file path, genome file path, and a label
 //encodes the file, which create a repeat_file, bloom-filter file , false negatives file, false positives file
@@ -41,14 +41,37 @@ int main(int argc, char *argv[]) {
   char* test_number=NULL;
   long long num_of_reads=0;
   test_number = argv[1];
-
-  if (strcmp(argv[3], "-v")){
-    printf("verbose mode\n");
-    #define verbose_mode 0
-  }
-  else {
-    printf("no verbose mode\n");
-    #define verbose_mode 1
+  char ref_genome[2048]="";
+  char prefix[2048]="";
+  char input_file[2048]="";
+  
+  if (argv[2]!=NULL){
+    if (strcmp(argv[2], "-v")==0){
+      printf("verbose mode\n");
+      VERBOSE_MODE=1;
+      if (argv[3]!=NULL){
+        sprintf(prefix,"%s", argv[3]);
+      }
+      if (argv[4]!=NULL){
+        sprintf(ref_genome,"%s", argv[4]);
+     }
+      if (argv[5]!=NULL){
+        sprintf(input_file,"%s", argv[5]);
+      }
+    }
+    else {
+      printf("no verbose mode\n");
+      VERBOSE_MODE=0;
+      if (argv[2]!=NULL){
+        sprintf(prefix, "%s", argv[2]);
+      }
+      if (argv[3]!=NULL){
+        sprintf(ref_genome, "%s", argv[3]);
+      }
+      if (argv[4]!=NULL){
+        sprintf(input_file,"%s", argv[4]);
+      }
+    }
   }
 /////////////
 //Help
@@ -57,14 +80,14 @@ int main(int argc, char *argv[]) {
     printf("\nProgram: barcode\n"
            "Contact: royerozov@tau.ac.il\n\n"
            "Usage:   barcode  <command> [options]\n\n"
-           "Encode command: barcode encode [-v] <prefix> <in.file> <reference genome>\n"
+           "Encode command: barcode encode [-v] <prefix> <reference genome> <in.file>\n"
            "Decode command: barcode decode [-v] <prefix> <reference genome>\n\n"
            "Options: -v\tverbose mode, minimal screen output\n\n");
            return(0);
   }
 
   else if ((strcmp(test_number, "encode") ==0) && (argv[2]==NULL)){
-    printf("\nUsage: barcode encode [-v] <prefix> <in.file> <reference genome>\n\n"
+    printf("\nUsage: barcode encode [-v] <prefix> <reference genome> <in.file>\n\n"
            "Options: -v\tverbose mode, minimal screen output\n\n");
            return(0);
      }
@@ -86,7 +109,7 @@ int main(int argc, char *argv[]) {
     strcat(file_path, argv[2]);
     strcat(file_path, "_stderr.txt");
     stderr = fopen (file_path, "w");
-    test_encode(argv[3], argv[4], argv[2], 1, 1);
+    test_encode(input_file, ref_genome, prefix, 1, 1);
     printf("done encode");
     fclose(stderr);
   }
@@ -106,7 +129,7 @@ int main(int argc, char *argv[]) {
     strcat(file_path, argv[2]);
     strcat(file_path, "_stderr.txt");
     stderr = fopen (file_path, "w");
-    test_decode(argv[3], argv[2], 1, 1);
+    test_decode(ref_genome, prefix, 1, 1);
     printf("done decode");
     fclose(stderr);
   }
@@ -116,7 +139,7 @@ int main(int argc, char *argv[]) {
 /// ./test_barcode 15 testing_cascade_with_zip ../data/fasta_input/hg19.100000.fasta  ../data/hg19_samp.fa
   else if (strcmp(test_number, "15") ==0) {
     printf("doing test 15 of cascade encoding file and decoding it with ziipng \n");
-    test_encode_decode(argv[3], argv[4], argv[2], 1, 1);
+    test_encode_decode(input_file, ref_genome, prefix, 1, 1);
     printf("done test 14 of encode decode with cascade with zip");
   }
   

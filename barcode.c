@@ -9,7 +9,7 @@
 if MEM_CHECK=1 (defined in barcode.h print time and memory (twice with delay of 21 sec)
 */
 void mem_check(){
-   if (MEM_CHECK){
+   if (MEM_CHECK==1){
      sleep(20);
      system("date");
      system("smem");
@@ -39,7 +39,7 @@ int make_scalce_file(char* file_name, char* new_file_name, int read_len){
   int i;
   int pos;
   char *buffer = (char *)malloc(read_len+2);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("opening %s and creating new fastq format file %s \n", file_name, new_file_name);
   }
   f = fopen(file_name, "r");
@@ -68,7 +68,7 @@ int make_scalce_file(char* file_name, char* new_file_name, int read_len){
   fclose(f);
   fclose(f_new);
   free(buffer);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("done make scalce file func\n");
   }
 }
@@ -83,7 +83,7 @@ the unnecessary scacen file
 */
 int rm_scalce_files(char* prefix_name){
   char file_name[1024]="";
-
+  if (0){
   strcat(file_name, prefix_name);
   strcat(file_name, "_1.scalcen");
   unlink(file_name);
@@ -96,6 +96,7 @@ int rm_scalce_files(char* prefix_name){
   strcat(file_name, prefix_name);
   strcat(file_name, "_fastq.txt");
   unlink(file_name);
+  }
 }
 ///////////////////
 //scalce_compress
@@ -123,11 +124,12 @@ int scalce_compress_files(char* prefix_name, int read_len, int number_of_cascade
   make_scalce_file(file_name, new_file_name,read_len);
   strcat(comp_file_name, prefix_name);
   strcat(comp_file_name, "_fn_repeat");
-  strcat(command, "scalce-bin ");
+  strcat(command, SCALCE);
+  strcat(command, " ");
   strcat(command, new_file_name);
   strcat(command, " -A -T 1 -n library -o ");
   strcat(command, comp_file_name);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("in scalce_compress files\n executing the next command %s \n", command);
   }
   snprintf(buffer, sizeof(buffer), "%s", command);
@@ -152,11 +154,12 @@ int scalce_compress_files(char* prefix_name, int read_len, int number_of_cascade
   strcat(comp_file_name, prefix_name);
   strcat(comp_file_name, "_fp_");
   strcat(comp_file_name, str);
-  strcat(command, "scalce-bin ");
+  strcat(command, SCALCE);
+  strcat(command, " ");
   strcat(command, new_file_name);
   strcat(command, " -A -T 1 -n library -o ");
   strcat(command, comp_file_name);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("executing the next command %s \n", command);
   }
   snprintf(buffer, sizeof(buffer), "%s", command);
@@ -181,7 +184,7 @@ int take_reads_from_fastq_file(char* decomp_file_name, char* new_file_name, int 
   int pos;
   long long line_number=1;
   char *buffer = (char *)malloc(read_len+2);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("opening fastq %s and creating new reads file %s \n", decomp_file_name, new_file_name);
   }
   f = fopen(decomp_file_name, "r");
@@ -205,7 +208,7 @@ int take_reads_from_fastq_file(char* decomp_file_name, char* new_file_name, int 
   fclose(f);
   fclose(f_new);
   free(buffer);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("done take_reads_from_fastq_file\n");
   }
 }
@@ -232,12 +235,13 @@ int scalce_decompress_file(char* prefix_name, int read_len){
   strcat(scalen_file_name,prefix_name);
   strcat(scalen_file_name, "_1.scalceq");
   strcat(file_name, "_1.scalcer");
-  strcat(command,"scalce-bin ");
+  strcat(command,SCALCE);
+  strcat(command," ");
   strcat(command,file_name);
   strcat(command, " -n library -d -o ");
   strcat(command, prefix_name);
   if( (access( scalen_file_name, F_OK ) != -1) && (access( file_name, F_OK ) != -1 )) { //make sure they weren't empty files, this happens for exmample for no repeats, or no fp file was genereaed
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("executing the next command %s \n", command);
     }
     snprintf(buffer, sizeof(buffer), "%s", command);
@@ -249,7 +253,7 @@ int scalce_decompress_file(char* prefix_name, int read_len){
     unlink(decomp_file_name);
   }
   else{
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("no %s , %s files exist, meaning there are no reads for them then dont need to uncomprss these files\n", scalen_file_name, file_name);
     }
   }
@@ -311,7 +315,7 @@ double get_f_val(long long numreads, long long genome_len, int read_len, char* p
    strcat(command, read_len_c);
    strcat(command, " ");
    strcat(command, prefix);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("in get_f_val \nexecuting the next command %s \n", command);
   }
    snprintf(buffer, sizeof(buffer), "%s", command);
@@ -320,7 +324,7 @@ double get_f_val(long long numreads, long long genome_len, int read_len, char* p
   f_file = fopen(f_path, "r");
   fscanf(f_file, "%lf", &f_value);
   fclose(f_file);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("f values is %lf\n", f_value);
   }
   return(f_value);
@@ -337,7 +341,7 @@ void get_bf_params(long long * bf_params, long long numreads, long long genome_l
   int num_of_hush;
   long long table_size;
   f_val=get_f_val(numreads, genome_len, read_len, prefix);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("f values is %lf\n", f_val);
   }
   num_of_hush=1; 
@@ -377,7 +381,7 @@ void con_file_list(char* file_name, char* label, char* suffix,char* files_list){
     strcat(files_list, file_name);
   }
   else {
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("the file %s doesnt exist, as no reads exists\n", file_name);
     }
   }
@@ -426,7 +430,7 @@ int zip_or_remove_encoded_files(char* archive_prefix_name, int number_of_cascade
   strcat(zip_command, archive_name);
   strcat(zip_command, files_list);
   if(encode_or_decode==0){
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("executing zip command %s \n", zip_command);
       fprintf(stderr, "executing zip command %s \n", zip_command);
     }
@@ -437,13 +441,14 @@ int zip_or_remove_encoded_files(char* archive_prefix_name, int number_of_cascade
   memset(&buffer[0], 0, sizeof(buffer));
   strcat(rm_command,"rm ");
   strcat(rm_command, files_list);
-  if ("verbose_mode==0"){
+  if (0){
+  if (VERBOSE_MODE==0){
     printf("executing rm command %s \n", rm_command);
     fprintf(stderr, "executing zip command %s \n", rm_command);
   }
   snprintf(buffer, sizeof(buffer), "%s", rm_command);
   system(buffer);
-
+  }
 }
 
 //************************************************************************************
@@ -548,7 +553,7 @@ int handle_line(char *line, hattrie_t* trie_unique, hattrie_t* trie_repeat, int 
 //************************************************************************************
 int hattrie_iteration(hattrie_t* T, char* m_label, char* output_label, int with_duplicates)
 {   
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("iterating through keys for %s trie \n", m_label);
       fprintf(stderr, "iterating through keys for %s trie \n", m_label);
     }
@@ -578,19 +583,21 @@ int hattrie_iteration(hattrie_t* T, char* m_label, char* output_label, int with_
         value   = hattrie_iter_val(i);
         if (with_duplicates==1){
           for(repeat_number = 1; repeat_number <= *value; repeat_number++){       
-            fprintf(fp, "%s", key); 
+            fprintf(fp, "%s", key);
+            count++; 
           }
         }  
         else {
           fprintf(fp, "%s", key);
+          count++;
         }
         hattrie_iter_next(i);
     }
     hattrie_iter_free(i);
     fclose(fp);
-    if ("verbose_mode==0"){
-      printf("done iterating.\n");
-      fprintf(stderr, "done iterating.\n");
+    if (VERBOSE_MODE==0){
+      printf("done iterating. wrote %lld number of reads\n", count);
+      fprintf(stderr, "done iterating.wrote %lld number of reads\n", count);
     }
 
     return(1);
@@ -605,7 +612,7 @@ int hattrie_iteration(hattrie_t* T, char* m_label, char* output_label, int with_
 //************************************************************************************
 int hattrie_iteration_2(hattrie_t* T, FILE* fp, int with_duplicates)
 {
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("doing hatrie_iteration_2\n");
       fprintf(stderr, "doing hatrie_iteration_2\n");
     }
@@ -636,7 +643,7 @@ int hattrie_iteration_2(hattrie_t* T, FILE* fp, int with_duplicates)
         hattrie_iter_next(i);
     }
     hattrie_iter_free(i);
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("done iterating. iterated of %lld strings\n",count);
       fprintf(stderr, "done iterating. iterated of %lld strings\n",count);
     }
@@ -676,13 +683,13 @@ int make_repeat_and_unique_tries(char* reads_file_path, hattrie_t* trie_unique, 
   int has_N; //1 if line contains 'N', '0' otherwise
   long long unique_read_num=0;
   int is_single_line=0;
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("opening file to read \n");
     fprintf(stderr, "opening file to read \n");
   }
  
   f = fopen(reads_file_path, "r");
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("finished opening file \n");
     fprintf(stderr, "finished opening file \n");
    }
@@ -721,7 +728,9 @@ int make_repeat_and_unique_tries(char* reads_file_path, hattrie_t* trie_unique, 
       fclose(f);
   }
   else {
+    printf("Error: couldnt open file %s \n",reads_file_path);
     fprintf(stderr, "Error: couldnt open file %s \n",reads_file_path);
+    exit(1);
   }  
   free(buffer); 
   
@@ -838,7 +847,7 @@ int cascading_fp_encode(hattrie_t* ref_reads_trie, hattrie_t* ref_fp_trie, char*
   char* m_key;
   
   hattrie_iter_t* i = hattrie_iter_begin(ref_reads_trie, false);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("start cascading_fp_encode\n");
     fprintf(stderr, "start cascading_fp_encode\n");
     printf("hashing FP number %d to BF number %d\n", iteration-1, iteration);
@@ -846,14 +855,14 @@ int cascading_fp_encode(hattrie_t* ref_reads_trie, hattrie_t* ref_fp_trie, char*
   }
   if (ref_fp_trie==NULL){  //in the first case where FP file is big, we will load it to BF startight from file
     load_file_to_bf(ref_fp_path, bf_ref_fp);
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("done hashing FP file to BF \n");
       fprintf(stderr, "done hashing FP file to BF \n");
     }
   }
   else{ //if not in first iteration, we will load to trie since we gonna use it after anyways
     hash_trie_into_bf(ref_fp_trie, bf_ref_fp); //first hash FP1 to BF2
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("done hashing FP trie to BF \n");
       fprintf(stderr, "done hashing FP trie to BF  \n");
     }
@@ -886,14 +895,14 @@ int cascading_fp_encode(hattrie_t* ref_reads_trie, hattrie_t* ref_fp_trie, char*
     fclose(fp_file);
   }
   else{
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
      printf("done new making FP %d \n", iteration);
      fprintf(stderr,"done makin new FP %d \n", iteration);
      mem_check();
     }
   }
 
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("we checked for %lld reads in which, we had total number of %lld which written into new  FP file\n",total_count, *num_of_new_fp_reads);
     fprintf(stderr, "we checked for %lld reads in which, we had total number of %lld which written into new  FP file\n",total_count, *num_of_new_fp_reads);
     printf("done creating FP number %d\n", iteration);
@@ -928,7 +937,7 @@ cascade_fp(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads, 
   hattrie_t* fp_ref_trie;
   hattrie_t* cur_fp_trie;
   hattrie_t* new_fp_trie;
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("start cascading_fp_encode with %lld initial FP reads\n", *number_of_fp_reads);
     fprintf(stderr, "start cascading_fp_encode with %lld initial FP reads\n", *number_of_fp_reads);
   }
@@ -945,33 +954,33 @@ cascade_fp(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads, 
   num_of_hash_func=bf_params[0];
   bf_table_size=bf_params[1];
   bf = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("created empty BF2 with  %lld table size,  and %d number of hash func\n", bf_table_size,num_of_hash_func);
     fprintf(stderr, "created empty BF2 with  %lld table size,  and %d number of hash func\n", bf_table_size,num_of_hash_func);
   }
  //first iteration
   new_fp_trie=hattrie_create();
   cascading_fp_encode(unique_reads, NULL, fp_ref_file_path, bf, new_fp_trie, new_fp_file_path, &num_of_new_fp_reads, 2);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
      printf("before freeing unique reads \n");
      mem_check();
      printf("freeing unique reads\n");
      fprintf(stderr, "freeing unique reads\n");
   }
   hattrie_free(unique_reads);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     mem_check();
   }
 
   print_bf(bf, bf_table_size,num_of_hash_func, label, bf_label);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("freeing bf2 \n");
     fprintf(stderr, "freeing bf2 \n");
    }
   bloom_filter_free(bf);
 
   fp_ref_trie=hattrie_create();
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("loadin fp1 to trie from file\n");
     fprintf(stderr, "loadin fp1 to trie from file\n");
   }
@@ -1001,7 +1010,7 @@ cascade_fp(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads, 
      num_of_hash_func=bf_params[0];
      bf_table_size=bf_params[1];  
      bf = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
-     if ("verbose_mode==0"){
+     if (VERBOSE_MODE==0){
        printf("created empty BF number %d with  %lld table size and %d number of hash func\n",i, bf_table_size,num_of_hash_func);
        fprintf(stderr, "created empty BF number %d with  %lld table size and %d number of hash func\n",i, bf_table_size,num_of_hash_func);
      }
@@ -1015,12 +1024,12 @@ cascade_fp(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads, 
      num_of_new_fp_reads=0; //reset number of new fp reads
      cascading_fp_encode(fp_ref_trie, cur_fp_trie, NULL, bf, new_fp_trie, new_fp_file_path, &num_of_new_fp_reads, i); //use the previois fp ref_file as the current refference.i (e.g fp_ref_trie=fp1,cur_fp_trie=fp_2,bf=bf2==> fp_new=fp3=fp1 not it bf_2
   //after that, fp_ref_trie should be free and set to cur_fp_trie, and cur_fp_trie shold be new_fp_file_path
-     if ("verbose_mode==0"){
+     if (VERBOSE_MODE==0){
        printf("freeing FP number %d \n", i-2);
        fprintf(stderr, "freeing FP number %d \n", i-2);
      }
      free(fp_ref_trie);
-     if ("verbose_mode==0"){
+     if (VERBOSE_MODE==0){
       printf("after freeing FP number %d \n", i-2);
       fprintf(stderr, "after freeing FP number %d \n", i-2);
       mem_check(); 
@@ -1029,28 +1038,28 @@ cascade_fp(hattrie_t* unique_reads, char* label, long long* number_of_fp_reads, 
      memset(&bf_label[0], 0, sizeof(bf_label));
      strcat(bf_label, "bf_");
      strcat(bf_label, str);
-     if ("verbose_mode==0"){
+     if (VERBOSE_MODE==0){
        printf("printing BF number %d \n", i);
        fprintf(stderr, "printing BF number %d \n", i);
      }
      print_bf(bf, bf_table_size,num_of_hash_func, label, bf_label);
-     if ("verbose_mode==0"){
+     if (VERBOSE_MODE==0){
        printf("freeing BF number %d \n", i);
        fprintf(stderr, "freeing BF number %d \n", i);
      }
      bloom_filter_free(bf);
-     if ("verbose_mode==0"){
+     if (VERBOSE_MODE==0){
         printf("after freeing BF number %d \n", i);
         fprintf(stderr, "after freeing BF number %d \n", i);
         mem_check();
      }
   }
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("after freeing FP number %d \n", i-1);
     fprintf(stderr, "after freeing FP number %d \n", i-1);
   }
   free(cur_fp_trie);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
      printf("after freeing FP number %d \n", i-1);
      fprintf(stderr,"after freeing FP number %d \n", i-1);
      mem_check();
@@ -1083,7 +1092,7 @@ int query_bf_with_genome_2(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t*
   value_t* m_key;
   FILE *fp_file;
   char output_path[1024]="";
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("start querying unique BF through genome \n");
     fprintf(stderr, "start querying unique BF through genome \n");
   }
@@ -1171,7 +1180,7 @@ int query_bf_with_genome_2(BloomFilter* bf_unique, FILE* genome_file ,hattrie_t*
   free(complementary_window);
   free(prev_comp_window);
   fclose(fp_file);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("there where total of %lld windows, in which %lld of original strands and %lld of complementary strands gave true for being in the BF \n",count_windows, count_in_bf, count_comp_in_bf);
     fprintf(stderr, "there where total of %lld windows, in which %lld of original strands and %lld of complementary strands gave true for being in the BF \n",count_windows, count_in_bf, count_comp_in_bf);
     printf("done querying unique BF through genome \n");
@@ -1205,7 +1214,7 @@ int check_fn(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_to_
     hattrie_iter_t* i = hattrie_iter_begin(trie_to_check, false);
     FILE *fp;
     char output_path[1024]="";
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("start check_fn\n");
       fprintf(stderr, "start check_fn\n");
     }
@@ -1225,6 +1234,7 @@ int check_fn(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_to_
         m_key = hattrie_tryget(trie_true, check_key, len);
         if(m_key==NULL){ //if not in trie_true - means false negative, then insert to FP trie
            fprintf(fp, "%s", check_key);
+           count++;
         }
 //        else { //means it is true 
            //check if it's in uqine- if not then print it to FN
@@ -1240,9 +1250,9 @@ int check_fn(hattrie_t* trie_true, hattrie_t* trie_to_check, hattrie_t* trie_to_
 //    printf("we had %lld false_positives out of %lld reads \n", count, total_count);
     hattrie_iter_free(i);
     fclose(fp);
-    if ("verbose_mode==0"){
-      printf("done check_fn\n");
-      fprintf(stderr, "done check_fn\n"); 
+    if (VERBOSE_MODE==0){
+      printf("done check_fn, checked for %lld reads which %lld where FN \n",total_count, count);
+      fprintf(stderr, "done check_fn, checked for %lld reads which %lld where FN \n",total_count, count); 
     }
     return(1);
 }
@@ -1261,7 +1271,7 @@ int print_bf(BloomFilter* bf, long long table_size, int num_of_hash_func, char* 
   char output_path[1024]="";
   long long index=0;
   char* cur_byte;
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("start print_bf\n");
     fprintf(stderr, "start print_bf\n");
   }
@@ -1276,12 +1286,12 @@ int print_bf(BloomFilter* bf, long long table_size, int num_of_hash_func, char* 
   fprintf(fp, "%lld\n",table_size);
   fprintf(fp, "%d\n",num_of_hash_func);
   array_size = (table_size + 7) / 8;
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("before mallocing bf array\n");
     mem_check();
   }
   bf_array = (char *)malloc(sizeof(char)*array_size);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("after mallocing bf array\n");
     mem_check();
     printf("doing bloomfilter read\n");
@@ -1293,12 +1303,12 @@ int print_bf(BloomFilter* bf, long long table_size, int num_of_hash_func, char* 
     index++;
   }
   free(bf_array);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
    printf("after freeing bf_array\n");
    mem_check();
   }
   fclose(fp);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("done print_bf.\n");
     fprintf(stderr, "done print_bf.\n");
   }
@@ -1319,7 +1329,7 @@ int print_bf(BloomFilter* bf, long long table_size, int num_of_hash_func, char* 
 int encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, int read_size, char* label, long long bf_table_size,int num_of_hash_func, long long* number_of_fp_reads) {
     hattrie_t* trie_genome_unique; //put 'accepts' (everything that uniqe BF says yes that it's in genome) into a trie
     hattrie_t* trie_genome_true; //holds reads that really mapped into the genome reference
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("start encode function\n");
       fprintf(stderr, "start encode function\n");
       printf("hasing trie into bf \n");
@@ -1330,32 +1340,32 @@ int encode(hattrie_t* trie_unique, FILE* genome, BloomFilter* bf, int read_size,
    trie_genome_unique = hattrie_create(); //will contain all the accepts windows with no FP
    trie_genome_true = hattrie_create();     //reads that really maps to the genome (true accepts)
    if (query_bf_with_genome_2(bf, genome, trie_unique, read_size,trie_genome_true,"fp_1", label, number_of_fp_reads)) {
-     if ("verbose_mode==0"){
+     if (VERBOSE_MODE==0){
        mem_check();
      }
    }
-   if ("verbose_mode==0"){  
+   if (VERBOSE_MODE==0){  
      printf("start checking for false negative \n");
      fprintf(stderr, "start checking for false negative \n");
    }
    if (check_fn(trie_genome_true,trie_unique, NULL,"fn_repeat", label)){
-     if ("verbose_mode==0"){
+     if (VERBOSE_MODE==0){
         printf("done checking for false negative\n");
         mem_check();
      }
    }
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("freeing genome_true \n");
     fprintf(stderr, "freeing genome_true \n");
    }
    hattrie_free(trie_genome_true);
-   if ("verbose_mode==0"){
+   if (VERBOSE_MODE==0){
      mem_check();
      printf("printing bloom filter\n");
      fprintf(stderr, "printing bloom filter\n");
     }
    print_bf(bf, bf_table_size,num_of_hash_func, label, "bf_1");
-   if ("verbose_mode==0"){
+   if (VERBOSE_MODE==0){
      printf("done printing bloom filter\n");
      fprintf(stderr, "done printing bloom filter\n");
      printf("done encode function\n");
@@ -1381,7 +1391,7 @@ int load_bf(char* bf_path, BloomFilter** bf, long long* bf_results) {
   long long array_size=0;
   bf_file = fopen(bf_path, "r");
   fscanf(bf_file, "%lld %d\n", &table_size, &num_of_hash);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("table size is %lld, num of hash %d \n", table_size, num_of_hash);
     fprintf(stderr, "table size is %lld, num of hash %d \n", table_size, num_of_hash); 
   }
@@ -1400,7 +1410,7 @@ int load_bf(char* bf_path, BloomFilter** bf, long long* bf_results) {
   bf_results[1] = num_of_hash;
   fclose(bf_file);
   free(bf_array);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("done load bf \n");
     fprintf(stderr, "done load bf \n");
   }
@@ -1429,7 +1439,7 @@ int load_file_to_trie(char* reads_file_path, hattrie_t* reads_trie) {
   int len;
   char copy_buffer[200]="";
   long long old_repeat_num; //holds value of number of repeats of a key before enetring another same key
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("memory before load\n");
     fprintf(stderr, "memory before load\n");
     mem_check(); 
@@ -1468,7 +1478,7 @@ int load_file_to_trie(char* reads_file_path, hattrie_t* reads_trie) {
     fprintf(stderr, "Error: couldnt open file %s \n",reads_file_path);
   }
   free(buffer);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("done load file to trie: loaded %lld reads \n", read_num);
     fprintf(stderr, "done load file to trie: loaded %lld reads \n", read_num);
   }
@@ -1493,7 +1503,7 @@ int load_file_to_bf(char* reads_file_path, BloomFilter* bf) {
   int len;
   char copy_buffer[200]="";
   long long old_repeat_num; //holds value of number of repeats of a key before enetring another same key
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("memory before load\n");
     fprintf(stderr, "memory before load\n");
     mem_check();
@@ -1525,7 +1535,7 @@ int load_file_to_bf(char* reads_file_path, BloomFilter* bf) {
     fprintf(stderr, "Error: couldnt open file %s \n",reads_file_path);
   }
   free(buffer);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("done load file to trie: loaded %lld reads \n", read_num);
     fprintf(stderr, "done load file to trie: loaded %lld reads \n", read_num);
   }
@@ -1604,7 +1614,7 @@ int decode_unique_reads_from_genome(char* genome_file_path, hattrie_t* trie_fp, 
   long long count_comp_in_bf=0;
   long long count_windows=0;
   value_t* m_key;
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("starting decode_unique_reads_from_genome- will load the unique decoded reads into newo uniqu etrie\n");
     fprintf(stderr, "starting decode_unique_reads_from_genome- will load the unique decoded reads into newo uniqu etrie\n");
     mem_check();
@@ -1696,7 +1706,7 @@ int decode_unique_reads_from_genome(char* genome_file_path, hattrie_t* trie_fp, 
   free(prev_window);
   free(complementary_window); 
   free(prev_comp_window);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("there where total of %lld windows, in which %lld of original strands and %lld of complementary strands gave true for being in the BF \n",count_windows, count_in_bf, count_comp_in_bf);
     fprintf(stderr, "there where total of %lld windows, in which %lld of original strands and %lld of complementary strands gave true for being in the BF \n",count_windows, count_in_bf, count_comp_in_bf); 
     printf("done decode_unique_reads_from_genome\n");
@@ -1722,7 +1732,7 @@ int decode(char* genome_file_path, char* fn_file_path, char* fp_file_path, int r
   char output_path[1024]="";
   char bf_path[1024]="";
   char str[15];
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("start decoding \n");
     fprintf(stderr, "start decoding \n");
     printf("copying repeat file to decoded file\n");
@@ -1761,17 +1771,17 @@ int decode(char* genome_file_path, char* fn_file_path, char* fp_file_path, int r
       }
     }
   }
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
   printf("loading fp file to trie \n");
   fprintf(stderr, "loading fp file to trie \n");
   }
   if (load_file_to_trie(fp_file_path, trie_fp)){
-     if ("verbose_mode==0"){
+     if (VERBOSE_MODE==0){
        mem_check();
      }
    }
   if (decode_unique_reads_from_genome(genome_file_path, trie_fp, trie_decoded_reads, bf_dec, read_size, cascade_number)){
-   if ("verbose_mode==0"){
+   if (VERBOSE_MODE==0){
      mem_check();
    }
   }
@@ -1781,17 +1791,17 @@ int decode(char* genome_file_path, char* fn_file_path, char* fp_file_path, int r
   fclose(decoded_file);
 //  hattrie_iteration(trie_decoded_reads, "decoded_file", label);
   for(iteration=0; iteration<cascade_number; iteration++){
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("freeing bf_dec number %d \n", iteration);
       fprintf(stderr, "freeing bf_dec number %d \n", iteration);
     }
     bloom_filter_free(bf_dec[iteration]);
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       mem_check();
     }
   }
   hattrie_free(trie_decoded_reads);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("after freeing decoded reads \n");
     fprintf(stderr, "afterfreeing decoded reads \n");
     mem_check();
@@ -1799,7 +1809,7 @@ int decode(char* genome_file_path, char* fn_file_path, char* fp_file_path, int r
   printf("freeing trie fp and done decoding \n");
   fprintf(stderr, "freeing trie fp and done decoding \n");
   hattrie_free(trie_fp);
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("freeing trie fp and done decoding \n");
     fprintf(stderr, "freeing trie fp and done decoding \n");
     mem_check();
@@ -1833,7 +1843,7 @@ void make_path(char* path, char* directory, char* label_1, char* label_2){
 void print_param_file(char*  label, int read_size, int number_of_cascades){
   char file_path[1024]="";
   FILE* f;
-  if ("verbose_mode==0"){
+  if (VERBOSE_MODE==0){
     printf("making param file\n");
     fprintf(stderr, "making param file\n");
   }
@@ -1882,13 +1892,13 @@ void encode_file(char * read_file_path, char* genome_file_path, char* label, int
     fprintf(stderr, "starting encode file \n");
     trie_repeat = hattrie_create();
     trie_unique = hattrie_create();
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("make unique and repeat tries\n");
       fprintf(stderr, "make unique and repeat tries\n");
     }
     
     if (make_repeat_and_unique_tries(read_file_path, trie_unique, trie_repeat, results)){
-      if ("verbose_mode==0"){
+      if (VERBOSE_MODE==0){
         printf("done making unique and repat tries\n");
         fprintf(stderr, "done making unique and repat tries\n");
          mem_check();
@@ -1901,7 +1911,7 @@ void encode_file(char * read_file_path, char* genome_file_path, char* label, int
     system("date");
     system("smem");
     hattrie_free(trie_repeat); //done with free trie- freeing it
-    if ("verbose_mode==0"){ 
+    if (VERBOSE_MODE==0){ 
       if (trie_repeat){
         printf("after freeing trie repeat\n");
         mem_check();
@@ -1916,9 +1926,15 @@ void encode_file(char * read_file_path, char* genome_file_path, char* label, int
     read_size = size-2;
     //getting length of genome to set input for optimal calculation of bf om get_bf_params
     genome_f = fopen(genome_file_path, "rb");
+    if (genome_f==NULL){
+      printf("ERROR: couldn't open reference genome file %s\n", genome_file_path);
+      fprintf(stderr, "ERROR: couldn't reference genome open file %s\n", genome_file_path);
+      exit(1);
+    }
+
     fseek(genome_f, 0, SEEK_END); 
     genome_len = 2*ftell(genome_f);
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("length of genome times 2 is %lld\n", genome_len);
       fprintf(stderr, "length of genome times 2 is %lld\n", genome_len);
     }
@@ -1928,14 +1944,14 @@ void encode_file(char * read_file_path, char* genome_file_path, char* label, int
     get_bf_params(bf_params, read_num, genome_len,read_size, label);
     num_of_hash_func=bf_params[0];
     bf_table_size=bf_params[1];    
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("read num is %lld table size is %lld  number of hash func is %u \n",read_num, bf_table_size, num_of_hash_func);
       fprintf(stderr, "read num is %lld table size is %lld number of hash func is %u \n",read_num, bf_table_size, num_of_hash_func);
       printf("creating bf\n");
       fprintf(stderr, "creating bf\n");
     }
     bf_unique = bloom_filter_new(bf_table_size, string_hash, num_of_hash_func);
-    if ("verbose_mode==0"){ 
+    if (VERBOSE_MODE==0){ 
       printf("start encoding\n");
       fprintf(stderr, "start encoding\n");
       mem_check();
@@ -1949,13 +1965,13 @@ void encode_file(char * read_file_path, char* genome_file_path, char* label, int
     }
 
     fclose(genome_f);
-    if ("verbose_mode==0"){  
+    if (VERBOSE_MODE==0){  
       printf("memory before freeing bf\n");
       fprintf(stderr, "memory before freeing bf\n");
       mem_check(); 
    }
     bloom_filter_free(bf_unique);
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       if(bf_unique){
       printf("memory after freeing bf_unique and before freein trie uniuqe\n");
       mem_check();
@@ -1971,7 +1987,7 @@ void encode_file(char * read_file_path, char* genome_file_path, char* label, int
    hattrie_free(trie_unique);
    number_of_cascades=1;
      if (trie_unique){
-       if ("verbose_mode==0"){
+       if (VERBOSE_MODE==0){
          printf("memory after freein trie_unique\n");
          mem_check();
      }
@@ -1981,17 +1997,17 @@ void encode_file(char * read_file_path, char* genome_file_path, char* label, int
   print_param_file(label, read_size, number_of_cascades);
   //zipping and compressing encdoedfiles with scalce and 7.z
   if (with_zip==1){
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
      printf("compressing fn_repeat and fp files with scalce\n");
    }
    scalce_compress_files(label, read_size, number_of_cascades);
-   if ("verbose_mode==0"){
+   if (VERBOSE_MODE==0){
      printf("done compressing fn_repeat and fp files with scalce\n");
      printf("zipping files\n");
      fprintf(stderr, "zipping files\n");
    }
    zip_or_remove_encoded_files(label, number_of_cascades, 0);
-   if ("verbose_mode==0"){
+   if (VERBOSE_MODE==0){
      printf("done zipping files\n");
      fprintf(stderr, "done zipping files\n");
    }
@@ -2018,11 +2034,11 @@ void decode_file(char* genome_file_path, char* label, int with_zip, int with_cas
 
 //unzippin
     if (with_zip==1){
-      if ("verbose_mode==0"){
+      if (VERBOSE_MODE==0){
         printf("unzipping files\n");
       }  
       unzip_encoded_files(label);
-      if ("verbose_mode==0"){
+      if (VERBOSE_MODE==0){
         printf("done unzipping files\n");
       }
     }
@@ -2033,7 +2049,7 @@ void decode_file(char* genome_file_path, char* label, int with_zip, int with_cas
     pf_file = fopen(param_file_path, "r");
     fscanf(pf_file, "%d %d\n", &read_size, &number_of_cascades);
     fclose(pf_file);
-    if ("verbose_mode==0"){
+    if (VERBOSE_MODE==0){
       printf("read size is %d, number of cascades is %d \n", read_size, number_of_cascades);
       fprintf(stderr, "read size is %d, number of cascades is %d \n", read_size, number_of_cascades);
       printf("start decoding\n");
@@ -2041,11 +2057,11 @@ void decode_file(char* genome_file_path, char* label, int with_zip, int with_cas
     }
 
     if (with_zip==1){
-      if ("verbose_mode==0"){
+      if (VERBOSE_MODE==0){
         printf("uncompressing repeat, fn and fp files with scalce\n");
       }
       scalce_decompress_files(label, read_size, number_of_cascades);
-      if ("verbose_mode==0"){
+      if (VERBOSE_MODE==0){
         printf("done uncompressing files files\n");
       }
     }
@@ -2058,7 +2074,7 @@ void decode_file(char* genome_file_path, char* label, int with_zip, int with_cas
     strcat(fp_file_path, str);
     strcat(fp_file_path,".txt");
     
-    if ("verbose_mode==0"){    
+    if (VERBOSE_MODE==0){    
       printf("fp path is %s\n", fp_file_path);
       fprintf(stderr, "fp path is %s\n", fp_file_path);
     }
@@ -2067,7 +2083,7 @@ void decode_file(char* genome_file_path, char* label, int with_zip, int with_cas
   }
 
     if (decode(genome_file_path, fn_file_path, fp_file_path, read_size, label, number_of_cascades)) {
-      if ("verbose_mode==0"){
+      if (VERBOSE_MODE==0){
         printf("done decode\n");
         mem_check();
       }
