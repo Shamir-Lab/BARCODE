@@ -14,7 +14,7 @@
 #define TABLE_FACTOR 10
 #define HASH_FUNC_FACTOR 0.69314
 #define MAX_CASCADES 100
-#define PYTHON "/a/home/cc/students/csguests/yaroneinhorn/anaconda/bin/python2.7"
+#define PYTHON "python"
 #define SCALCE "./scalce"
 #include <stdio.h>
 #include <stdlib.h>

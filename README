@@ -15,6 +15,7 @@ To recompile program:
 make
 
 Reuqieries:
+-You need to have 7-zip installed.
 -You need to have Scipy version 0.11.0 (or newer) installed.
 -You need to have the appropriate Scalce binary(scalce-bin) file for your operation sysetem: 
  http://sfu-compbio.github.io/scalce/
@@ -22,11 +23,11 @@ Reuqieries:
 Miscellaneous:
 -Make sure that the executable barcode file, the calc_f.py file and the executable scalce file are in the same folder!
 -The command for Scalce and Python are defined in the barcode.h file, and their default are defined with the variables SCALCE, and PYTHON 
-  with default values of "./scalce" and "./python",  if you'd like to change the paths for these commands you can change their defines in the barcode.h file
+  with default values of "./scalce" and "python",  if you'd like to change the paths for these commands you can change their defines in the barcode.h file
   and recompile it using make.
 
 Sanity check:
--barcode encode sanity_check data/hg19_samp.fa test.fasta
+-barcode encode sanity_check data/hg19_samp.fa data/test.fasta
   should result with sanity_check.7z.
   after encode:
   barcode decode sanity_check data/hg19_samp.fa

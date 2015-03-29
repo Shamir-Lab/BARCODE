@@ -131,7 +131,7 @@ int scalce_compress_files(char* prefix_name, int read_len, int number_of_cascade
     strcat(command, SCALCE);
     strcat(command, " ");
     strcat(command, new_file_name);
-    strcat(command, " -A -T 1 -n library -o ");
+    strcat(command, " -A -n library -o ");
     strcat(command, comp_file_name);
     if (VERBOSE_MODE==0){
       printf("in scalce_compress files\n executing the next command %s \n", command);
@@ -162,7 +162,7 @@ int scalce_compress_files(char* prefix_name, int read_len, int number_of_cascade
     strcat(command, SCALCE);
     strcat(command, " ");
     strcat(command, new_file_name);
-    strcat(command, " -A -T 1 -n library -o ");
+    strcat(command, " -A -n library -o ");
     strcat(command, comp_file_name);
     if (VERBOSE_MODE==0){
       printf("executing the next command %s \n", command);
