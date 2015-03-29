@@ -39,6 +39,7 @@ int make_scalce_file(char* file_name, char* new_file_name, int read_len){
   int i;
   int pos;
   char *buffer = (char *)malloc(read_len+2);
+  long long number_of_redas=0;
   if (VERBOSE_MODE==0){
     printf("opening %s and creating new fastq format file %s \n", file_name, new_file_name);
   }
@@ -55,7 +56,8 @@ int make_scalce_file(char* file_name, char* new_file_name, int read_len){
         pos=0;
         do{
           c = fgetc(f);
-           buffer[pos++] = c;
+          buffer[pos++] = c;
+          number_of_redas++;
         }while(c != EOF && c != '\n');
         if(c!=EOF){
           buffer[pos]=0;
@@ -69,8 +71,10 @@ int make_scalce_file(char* file_name, char* new_file_name, int read_len){
   fclose(f_new);
   free(buffer);
   if (VERBOSE_MODE==0){
-    printf("done make scalce file func\n");
+    printf("done make scalce file func, made fastq file of %lld reads\n", number_of_redas);
+    fprintf(stderr, "done make scalce file func, made fastq file of %lld reads\n", number_of_redas);
   }
+  return(1);
 }
 
 
@@ -121,21 +125,22 @@ int scalce_compress_files(char* prefix_name, int read_len, int number_of_cascade
   strcat(file_name, "_fn_repeat.txt");
   strcat(new_file_name, prefix_name);
   strcat(new_file_name, "_fn_repeat_fastq.txt");
-  make_scalce_file(file_name, new_file_name,read_len);
-  strcat(comp_file_name, prefix_name);
-  strcat(comp_file_name, "_fn_repeat");
-  strcat(command, SCALCE);
-  strcat(command, " ");
-  strcat(command, new_file_name);
-  strcat(command, " -A -T 1 -n library -o ");
-  strcat(command, comp_file_name);
-  if (VERBOSE_MODE==0){
-    printf("in scalce_compress files\n executing the next command %s \n", command);
+  if (make_scalce_file(file_name, new_file_name,read_len)){
+    strcat(comp_file_name, prefix_name);
+    strcat(comp_file_name, "_fn_repeat");
+    strcat(command, SCALCE);
+    strcat(command, " ");
+    strcat(command, new_file_name);
+    strcat(command, " -A -T 1 -n library -o ");
+    strcat(command, comp_file_name);
+    if (VERBOSE_MODE==0){
+      printf("in scalce_compress files\n executing the next command %s \n", command);
+      fprintf(stderr,"in scalce_compress files\n executing the next command %s \n", command);
+    }
+    snprintf(buffer, sizeof(buffer), "%s", command);
+    system(buffer);
+    rm_scalce_files(comp_file_name);
   }
-  snprintf(buffer, sizeof(buffer), "%s", command);
-  system(buffer);
-  rm_scalce_files(comp_file_name);
-
   memset(&file_name[0], 0, sizeof(file_name));
   memset(&new_file_name[0], 0, sizeof(new_file_name));
   memset(&comp_file_name[0], 0, sizeof(comp_file_name));
@@ -150,22 +155,23 @@ int scalce_compress_files(char* prefix_name, int read_len, int number_of_cascade
   strcat(new_file_name, "_fp_");
   strcat(new_file_name, str);
   strcat(new_file_name,"_fastq.txt");
-  make_scalce_file(file_name, new_file_name, read_len);
-  strcat(comp_file_name, prefix_name);
-  strcat(comp_file_name, "_fp_");
-  strcat(comp_file_name, str);
-  strcat(command, SCALCE);
-  strcat(command, " ");
-  strcat(command, new_file_name);
-  strcat(command, " -A -T 1 -n library -o ");
-  strcat(command, comp_file_name);
-  if (VERBOSE_MODE==0){
-    printf("executing the next command %s \n", command);
+  if (make_scalce_file(file_name, new_file_name, read_len)) {
+    strcat(comp_file_name, prefix_name);
+    strcat(comp_file_name, "_fp_");
+    strcat(comp_file_name, str);
+    strcat(command, SCALCE);
+    strcat(command, " ");
+    strcat(command, new_file_name);
+    strcat(command, " -A -T 1 -n library -o ");
+    strcat(command, comp_file_name);
+    if (VERBOSE_MODE==0){
+      printf("executing the next command %s \n", command);
+      fprintf(stderr, "executing the next command %s \n", command);
+    }
+    snprintf(buffer, sizeof(buffer), "%s", command);
+    system(buffer);
+    rm_scalce_files(comp_file_name);
   }
-  snprintf(buffer, sizeof(buffer), "%s", command);
-  system(buffer);
-  rm_scalce_files(comp_file_name);
-
 }
 
 /////////////////////////////////////////
@@ -186,6 +192,7 @@ int take_reads_from_fastq_file(char* decomp_file_name, char* new_file_name, int 
   char *buffer = (char *)malloc(read_len+2);
   if (VERBOSE_MODE==0){
     printf("opening fastq %s and creating new reads file %s \n", decomp_file_name, new_file_name);
+    fprintf(stderr, "opening fastq %s and creating new reads file %s \n", decomp_file_name, new_file_name);
   }
   f = fopen(decomp_file_name, "r");
   f_new = fopen(new_file_name, "w");
@@ -210,6 +217,7 @@ int take_reads_from_fastq_file(char* decomp_file_name, char* new_file_name, int 
   free(buffer);
   if (VERBOSE_MODE==0){
     printf("done take_reads_from_fastq_file\n");
+    fprintf(stderr,"done take_reads_from_fastq_file\n");
   }
 }
 
@@ -243,6 +251,7 @@ int scalce_decompress_file(char* prefix_name, int read_len){
   if( (access( scalen_file_name, F_OK ) != -1) && (access( file_name, F_OK ) != -1 )) { //make sure they weren't empty files, this happens for exmample for no repeats, or no fp file was genereaed
     if (VERBOSE_MODE==0){
       printf("executing the next command %s \n", command);
+      fprintf(stderr,"executing the next command %s \n", command);
     }
     snprintf(buffer, sizeof(buffer), "%s", command);
     system(buffer);
@@ -255,6 +264,7 @@ int scalce_decompress_file(char* prefix_name, int read_len){
   else{
     if (VERBOSE_MODE==0){
       printf("no %s , %s files exist, meaning there are no reads for them then dont need to uncomprss these files\n", scalen_file_name, file_name);
+      fprintf(stderr,"no %s , %s files exist, meaning there are no reads for them then dont need to uncomprss these files\n", scalen_file_name, file_name);
     }
   }
 }
@@ -1906,10 +1916,8 @@ void encode_file(char * read_file_path, char* genome_file_path, char* label, int
     }
     //printing repeat into fn_repeat file
     hattrie_iteration(trie_repeat, "fn_repeat", label, 1);
-    printf("before free repeat\n");
-    fprintf(stderr, "before free repeat\n");
-    system("date");
-    system("smem");
+    printf(" freeing repeat\n");
+    fprintf(stderr, "freeing repeat\n");
     hattrie_free(trie_repeat); //done with free trie- freeing it
     if (VERBOSE_MODE==0){ 
       if (trie_repeat){

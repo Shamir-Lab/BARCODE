@@ -1,7 +1,38 @@
-#COMPLIATION
- gcc -o test_barcode test_barcode.c barcode.c bloom-filter.c hash-string.c -I/specific/a/nas-eran-01/groups/eran_halperin/yaronein/projects/BARCODE/scripts/include/hat-trie -L./lib -lhat-trie -lm
-#RUNNING
-/usr/bin/time -v ./test_barcode $TEST_NUMBER $PREFIX $READS_DATA_PATH $REF_GENOME_PATH
-#RUNNING WITH CONDOR
-./make_and_submit_cmd_files.sh $TEST_NUMBER $PREFIX $READS_DATA_PATH $REF_GENOME_PATH
-#example ./make_and_submit_cmd_files.sh 2 hg19_c0_1 results/test1/hg19_c0_1_unique.txt ../data/hg19.fa
+program: barcode
+Contact: royerozov@tau.ac.il
+
+Usage:   barcode  <command> [options]
+
+Encode command: barcode encode [-v] <prefix> <reference genome> <in.file>
+Decode command: barcode decode [-v] <prefix> <reference genome>
+
+Options: -v	verbose mode, minimal screen output
+
+To see message again type:
+barcode
+
+To recompile program:
+make
+
+Reuqieries:
+-You need to have Scipy version 0.11.0 (or newer) installed.
+-You need to have the appropriate Scalce binary(scalce-bin) file for your operation sysetem: 
+ http://sfu-compbio.github.io/scalce/
+
+Miscellaneous:
+-Make sure that the executable barcode file, the calc_f.py file and the executable scalce file are in the same folder!
+-The command for Scalce and Python are defined in the barcode.h file, and their default are defined with the variables SCALCE, and PYTHON 
+  with default values of "./scalce" and "./python",  if you'd like to change the paths for these commands you can change their defines in the barcode.h file
+  and recompile it using make.
+
+Sanity check:
+-barcode encode sanity_check data/hg19_samp.fa test.fasta
+  should result with sanity_check.7z.
+  after encode:
+  barcode decode sanity_check data/hg19_samp.fa
+  should result with a file named sanity_check_decoded_file.txt and it should look like in data/expected_output.fa
+
+
+
+
+
