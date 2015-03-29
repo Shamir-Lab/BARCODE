@@ -1,6 +1,7 @@
 #include "barcode.h"
 
 int VERBOSE_MODE; //gloabal variable instead of deifne to avoid linker issues
+int KEEP_FILES=0; //global variable to keep unnecessary files. 1 to keep, 0 to remove
 
 //this function get a read file path, genome file path, and a label
 //encodes the file, which create a repeat_file, bloom-filter file , false negatives file, false positives file

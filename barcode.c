@@ -87,19 +87,19 @@ the unnecessary scacen file
 */
 int rm_scalce_files(char* prefix_name){
   char file_name[1024]="";
-  if (0){
-  strcat(file_name, prefix_name);
-  strcat(file_name, "_1.scalcen");
-  unlink(file_name);
-  memset(&file_name[0], 0, sizeof(file_name));
-  strcat(file_name, prefix_name);
-  strcat(file_name, ".txt");
-  unlink(file_name);
+  if (KEEP_FILES==0){
+    strcat(file_name, prefix_name);
+    strcat(file_name, "_1.scalcen");
+    unlink(file_name);
+    memset(&file_name[0], 0, sizeof(file_name));
+    strcat(file_name, prefix_name);
+    strcat(file_name, ".txt");
+    unlink(file_name);
 
-  memset(&file_name[0], 0, sizeof(file_name));
-  strcat(file_name, prefix_name);
-  strcat(file_name, "_fastq.txt");
-  unlink(file_name);
+    memset(&file_name[0], 0, sizeof(file_name));
+    strcat(file_name, prefix_name);
+    strcat(file_name, "_fastq.txt");
+    unlink(file_name);
   }
 }
 ///////////////////
@@ -131,7 +131,7 @@ int scalce_compress_files(char* prefix_name, int read_len, int number_of_cascade
     strcat(command, SCALCE);
     strcat(command, " ");
     strcat(command, new_file_name);
-    strcat(command, " -A -n library -o ");
+    strcat(command, " -A -T 1 -n library -o ");
     strcat(command, comp_file_name);
     if (VERBOSE_MODE==0){
       printf("in scalce_compress files\n executing the next command %s \n", command);
@@ -162,7 +162,7 @@ int scalce_compress_files(char* prefix_name, int read_len, int number_of_cascade
     strcat(command, SCALCE);
     strcat(command, " ");
     strcat(command, new_file_name);
-    strcat(command, " -A -n library -o ");
+    strcat(command, " -A -T 1 -n library -o ");
     strcat(command, comp_file_name);
     if (VERBOSE_MODE==0){
       printf("executing the next command %s \n", command);
@@ -451,13 +451,13 @@ int zip_or_remove_encoded_files(char* archive_prefix_name, int number_of_cascade
   memset(&buffer[0], 0, sizeof(buffer));
   strcat(rm_command,"rm ");
   strcat(rm_command, files_list);
-  if (0){
-  if (VERBOSE_MODE==0){
-    printf("executing rm command %s \n", rm_command);
-    fprintf(stderr, "executing zip command %s \n", rm_command);
-  }
-  snprintf(buffer, sizeof(buffer), "%s", rm_command);
-  system(buffer);
+  if (KEEP_FILES==0){
+    if (VERBOSE_MODE==0){
+      printf("executing rm command %s \n", rm_command);
+      fprintf(stderr, "executing zip command %s \n", rm_command);
+    }
+    snprintf(buffer, sizeof(buffer), "%s", rm_command);
+    system(buffer);
   }
 }
 

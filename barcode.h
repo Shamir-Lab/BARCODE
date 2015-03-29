@@ -29,6 +29,7 @@
 #include "hash-string.h"
 
 extern int VERBOSE_MODE;
+extern int KEEP_FILES;
 typedef unsigned char uint8;
 typedef unsigned short uint16;
 typedef unsigned int uint;
