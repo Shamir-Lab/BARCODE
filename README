@@ -40,3 +40,46 @@ Sanity check:
 
 
 
+=======
+program: barcode v0.5
+Authors: Roye Rozov, Yaron Einhorn
+Contact: rozovr@tau.ac.il
+
+Usage:   barcode  <command> [options]
+
+Encode command: barcode encode [-v] <prefix> <reference genome> <in.file>
+Decode command: barcode decode [-v] <prefix> <reference genome>
+
+Options: -v	verbose mode, control screen output
+
+To print a help message type:
+barcode
+
+To recompile program:
+make
+
+Requirements:
+-You need to have 7-zip installed.
+-You need to have Scipy version 0.11.0 (or newer) installed.
+-You need to have the appropriate SCALCE compiled file for your operating sysetem: 
+ http://sfu-compbio.github.io/scalce/
+ 	-If SCALCE fails to run & compile, we suggest downloading Zlib (www.zlib.net) 1.2.8 in the scalce directory and compiling it before 
+ 	compiling scalce 
+
+Miscellaneous:
+-Make sure that the executable barcode file, the calc_f.py file and the executable scalce file are in the same folder
+-The command for SCALCE and Python are defined in the barcode.h file, and their defaults are defined with the variables SCALCE, and PYTHON 
+  with default values of "./scalce" and "python",  if you'd like to change the paths for these commands you can change their defines in the barcode.h file
+  and recompile it using make.
+
+Sanity check:
+-barcode encode sanity_check data/hg19_samp.fa data/test.fasta
+  should result with sanity_check.7z.
+  after encode:
+  barcode decode sanity_check data/hg19_samp.fa
+  should result with a file named sanity_check_decoded_file.txt and it should look like in data/expected_output.fa
+
+
+
+
+>>>>>>> 91902fe07c4ba3a24d1547c485584d13f894ac2b
