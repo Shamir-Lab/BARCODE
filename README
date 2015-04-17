@@ -1,28 +1,31 @@
-program: barcode
-Contact: royerozov@tau.ac.il
+program: barcode v0.5
+Authors: Roye Rozov, Yaron Einhorn
+Contact: rozovr@tau.ac.il
 
 Usage:   barcode  <command> [options]
 
 Encode command: barcode encode [-v] <prefix> <reference genome> <in.file>
 Decode command: barcode decode [-v] <prefix> <reference genome>
 
-Options: -v	verbose mode, minimal screen output
+Options: -v	verbose mode, control screen output
 
-To see message again type:
+To print a help message type:
 barcode
 
 To recompile program:
 make
 
-Reuqieries:
+Requirements:
 -You need to have 7-zip installed.
 -You need to have Scipy version 0.11.0 (or newer) installed.
--You need to have the appropriate Scalce binary(scalce-bin) file for your operation sysetem: 
+-You need to have the appropriate SCALCE compiled file for your operating sysetem: 
  http://sfu-compbio.github.io/scalce/
+ 	-If SCALCE fails to run & compile, we suggest downloading Zlib (www.zlib.net) 1.2.8 in the scalce directory and compiling it before 
+ 	compiling scalce 
 
 Miscellaneous:
--Make sure that the executable barcode file, the calc_f.py file and the executable scalce file are in the same folder!
--The command for Scalce and Python are defined in the barcode.h file, and their default are defined with the variables SCALCE, and PYTHON 
+-Make sure that the executable barcode file, the calc_f.py file and the executable scalce file are in the same folder
+-The command for SCALCE and Python are defined in the barcode.h file, and their defaults are defined with the variables SCALCE, and PYTHON 
   with default values of "./scalce" and "python",  if you'd like to change the paths for these commands you can change their defines in the barcode.h file
   and recompile it using make.
 
@@ -32,7 +35,6 @@ Sanity check:
   after encode:
   barcode decode sanity_check data/hg19_samp.fa
   should result with a file named sanity_check_decoded_file.txt and it should look like in data/expected_output.fa
-
 
 
 
