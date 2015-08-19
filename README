@@ -1,4 +1,5 @@
 program: barcode v0.5
+based on http://www.biomedcentral.com/1471-2105/15/S9/S7
 Authors: Roye Rozov, Yaron Einhorn
 
 Usage:   barcode  <command> [options]
