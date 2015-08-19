@@ -1,6 +1,5 @@
 program: barcode v0.5
 Authors: Roye Rozov, Yaron Einhorn
-Contact: rozovr@tau.ac.il
 
 Usage:   barcode  <command> [options]
 
@@ -79,7 +78,3 @@ Sanity check:
   barcode decode sanity_check data/hg19_samp.fa
   should result with a file named sanity_check_decoded_file.txt and it should look like in data/expected_output.fa
 
-
-
-
->>>>>>> 91902fe07c4ba3a24d1547c485584d13f894ac2b
